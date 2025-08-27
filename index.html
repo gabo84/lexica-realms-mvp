@@ -2,39 +2,57 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Lexica Realms - MVP</title>
 <style>
   :root{
     --pastel1:#cfe9ff; --pastel2:#c9fff0; --pastel3:#f8f1d2; --pastel4:#e8d6ff; --pastel5:#ffe7e0;
     --blue:#77b7ff; --lilac:#c3a5ff; --shadow: rgba(0,0,0,0.12); --ink:#111;
+    /* Booster icons (configurá las URLs si querés usar tus PNGs) */
+    --img-breaker: "";   /* url(assets/breaker.png) */
+    --img-row: "";       /* url(assets/row.png) */
+    --img-col: "";       /* url(assets/col.png) */
+    --img-rainbow: "";   /* url(assets/rainbow.png) */
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:none;}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:linear-gradient(180deg,#f6fbff,#f9f9ff);color:var(--ink);} 
-  #app{width:100vw;height:100vh;max-width:1080px;margin:0 auto;display:flex;flex-direction:column;}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    background:linear-gradient(180deg,#f6fbff,#f9f9ff);
+    color:var(--ink);
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  #app{width:100vw;height:calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));max-width:480px;margin:0 auto;display:flex;flex-direction:column;}
 
-  header{width:100%;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.85);backdrop-filter:blur(6px);box-shadow:0 2px 10px var(--shadow);} 
+  header{
+    width:100%; padding:10px 16px; display:flex; justify-content:space-between; align-items:center;
+    background:#e9eaed; border-bottom-left-radius:22px; border-bottom-right-radius:22px;
+    box-shadow:0 2px 10px var(--shadow); position:sticky; top:0; z-index:5;
+  }
+  .debug-badge{background:#ff8f2e;color:#fff;font-weight:900;border:none;border-radius:10px;padding:8px 12px;box-shadow:0 2px 6px var(--shadow);} 
+  .goals-bar{display:flex;align-items:center;gap:18px;background:#a87657;color:#2b1b12;padding:10px 16px;border-radius:16px;margin-left:10px;}
+  .goal-item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .goal-swatch{width:34px;height:34px;border-radius:6px;box-shadow:inset 0 2px 0 rgba(255,255,255,.5), inset 0 -2px 0 rgba(0,0,0,.15);}
+  .goal-num{font-weight:900;}
   .stat{display:flex;gap:10px;align-items:center;font-weight:700;}
   .pill{background:#fff;padding:8px 12px;border-radius:999px;box-shadow:0 2px 6px var(--shadow);font-weight:800;}
-  #current-word{font-weight:900;letter-spacing:.5px;}
-  .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;box-shadow:0 1px 2px rgba(0,0,0,.15);} 
-  .dot-yellow{background:#fcd34d;} .dot-green{background:#34d399;} .dot-blue{background:#60a5fa;} .dot-purple{background:#a78bfa;}
-  .pill.goal{display:flex;align-items:center;gap:6px;font-weight:900;}
 
-  /* Board 80% ancho (mobile first) */
-  #board{width:80vw;max-width:720px;aspect-ratio:1/1;margin:10px auto;padding:10px;background:rgba(255,255,255,.7);border-radius:16px;box-shadow:0 10px 30px var(--shadow);position:relative;}
-  #tiles{position:absolute; inset:0; display:grid; grid-template-columns:repeat(7,1fr); grid-template-rows:repeat(7,1fr); gap:12px;}
+  .debug-wrap{position:relative;}
+  .debug-menu{position:absolute; right:0; top:44px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.2); padding:8px; display:none; z-index:10; min-width:180px;}
+  .debug-menu.show{display:block;}
+  .debug-menu .menu-item{display:block; width:100%; text-align:left; border:none; background:#fff; padding:10px 12px; border-radius:10px; font-weight:700; box-shadow:0 2px 6px var(--shadow); margin:6px 0;}
+  .debug-menu .menu-item.primary{background:var(--blue); color:#fff;}
 
-  /* Tiles “placa” alineadas, sin desfase por columna */
+  /* Board */
+  #board{width:92vw; max-width:420px; aspect-ratio:8/10; margin:12px auto; padding:12px; background:#f4f6f9; border-radius:14px; box-shadow:0 10px 30px var(--shadow); position:relative;}
+  #tiles{position:absolute; inset:0; display:grid; grid-template-columns:repeat(var(--cols,8),1fr); grid-template-rows:repeat(var(--rows,10),1fr); gap:12px;}
+
+  /* Tiles */
   .tile{
     display:flex; align-items:center; justify-content:center;
     font-size: clamp(18px,7vw,42px); font-weight:900; color: var(--ink);
     user-select:none; position:relative;
-    background: #eee; /* per-tile color will override inline */
-    box-shadow:
-      0 6px 14px rgba(0,0,0,.18),
-      inset 0 1px 0 rgba(255,255,255,.6),
-      inset 0 -3px 0 rgba(0,0,0,.18);
+    background:#eee; /* override inline per tile color */
+    box-shadow: 0 6px 14px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 0 rgba(0,0,0,.18);
     border-radius: 8px;
     transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms ease, filter 180ms ease; will-change: transform; 
     --ty: 0px; --sc: 1;
@@ -52,7 +70,7 @@
   .tile.glow{ animation: glow 800ms ease-out; }
   @keyframes glow{ 0%{ filter: drop-shadow(0 0 0 rgba(255,255,255,0)); } 50%{ filter: drop-shadow(0 0 12px rgba(255,255,255,1)); } 100%{ filter: drop-shadow(0 0 0 rgba(255,255,255,0)); } }
 
-  /* explosión + caída */
+  /* explode + fall */
   .tile.explode{ animation: explode .22s ease-out forwards; }
   @keyframes explode{ 0%{ transform: translateY(calc(var(--ty) + var(--fall, 0px))) scale(1); opacity:1; } 100%{ transform: translateY(calc(var(--ty) - 12px)) scale(.6); opacity:0; filter: blur(1px); } }
   .tile.fall{ animation: fall .18s ease-out; }
@@ -64,38 +82,61 @@
   .tile .badge{position:absolute;bottom:6px;right:6px;font-size:12px;font-weight:800;background:#111;color:#fff;padding:2px 6px;border-radius:999px;letter-spacing:.2px;opacity:.9;}
   .tile .ord{position:absolute; top:6px; left:6px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; background:#111; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2);} 
 
-  /* Hint + Debug (solo clases, sin líneas) */
+  /* Hint + Debug */
   .tile.hint{ box-shadow: 0 0 0 3px #000 inset, 0 6px 18px rgba(0,0,0,.35); }
   .tile.debug{ outline:3px dashed rgba(255,0,110,.6); outline-offset:-3px; }
 
-  /* Booster icons */
-  .tile.breaker::after{content:"🔨";position:absolute;top:6px;left:6px;font-size:16px;opacity:.95;}     /* 4 letras */
-  .tile.row::after{content:"➡️";position:absolute;top:6px;left:6px;font-size:16px;opacity:.95;}         /* 5 letras */
-  .tile.col::after{content:"⬇️";position:absolute;top:6px;left:6px;font-size:16px;opacity:.95;}         /* 6 letras */
-  .tile.rainbow::after{content:"🌈";position:absolute;top:6px;left:6px;font-size:16px;opacity:.95;}     /* 7+ letras */
+  /* Booster icons (image fallback a emoji) */
+  .tile.breaker::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-breaker);}
+  .tile.breaker:not([style*="--img-breaker"])::after{content:"🔨"; background-image:none; width:auto; height:auto; font-size:16px;}
+
+  .tile.row::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-row);} 
+  .tile.row:not([style*="--img-row"])::after{content:"➡️"; background-image:none; width:auto; height:auto; font-size:16px;}
+
+  .tile.col::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-col);} 
+  .tile.col:not([style*="--img-col"])::after{content:"⬇️"; background-image:none; width:auto; height:auto; font-size:16px;}
+
+  .tile.rainbow::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-rainbow);} 
+  .tile.rainbow:not([style*="--img-rainbow"])::after{content:"🌈"; background-image:none; width:auto; height:auto; font-size:16px;}
   .tile.rainbow{background:conic-gradient(from 0deg,#f9c,#9cf,#9fc,#fc9,#f9c);} 
 
   /* Targeting mode */
   #board.targeting .tile{ cursor: crosshair; }
 
-  #bottom{width:100%;padding:12px 16px 18px;display:flex;gap:10px;align-items:center;justify-content:space-between;background:rgba(255,255,255,.88);backdrop-filter:blur(6px);box-shadow:0 -2px 10px var(--shadow);} 
+  #bottom{width:100%; padding:14px 16px; display:flex; align-items:center; justify-content:center; background:#e9eaed; box-shadow:0 -2px 10px var(--shadow); position:sticky; bottom:0; z-index:5;}
+  #current-word{font-weight:900; letter-spacing:4px; font-size:20px; background:#fff; padding:10px 14px; border-radius:12px; box-shadow:0 2px 6px var(--shadow); min-width:200px; text-align:center;}
   .btn{border:none;padding:12px 16px;border-radius:12px;font-weight:800;background:#fff;box-shadow:0 3px 10px var(--shadow);} 
   .btn.primary{background:var(--blue);color:#fff;} .btn.warn{background:var(--lilac);color:#111;}
 
   #toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:9;}
+
+  /* Tutorial modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:20;}
+  .modal[hidden]{display:none !important;}
+  .modal-panel{background:#fff;border-radius:16px;max-width:420px;width:90vw;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.3);} 
+  .modal h3{margin:0 0 8px 0;}
+  .modal ol{margin:0 0 8px 18px;}
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <div class="stat">
-      <span class="pill">Level <span id="level">1</span></span>
       <span class="pill">Moves <span id="moves">20</span></span>
-      <span class="pill goal"><span class="dot dot-yellow"></span><span id="goalY">20</span></span>
-      <span class="pill goal"><span class="dot dot-green"></span><span id="goalG">20</span></span>
-      <span class="pill goal"><span class="dot dot-blue"></span><span id="goalB">20</span></span>
+      <div class="goals-bar">
+        <div class="goal-item"><div class="goal-swatch" style="background:#60a5fa"></div><div class="goal-num" id="goalB">20</div></div>
+        <div class="goal-item"><div class="goal-swatch" style="background:#fcd34d"></div><div class="goal-num" id="goalY">20</div></div>
+        <div class="goal-item"><div class="goal-swatch" style="background:#a78bfa"></div><div class="goal-num" id="goalG">20</div></div>
+      </div>
     </div>
-    <div class="pill" id="current-word">WORD</div>
+    <div class="debug-wrap">
+      <button class="debug-badge" id="debugBtn" title="Open debug menu">DEBUG</button>
+      <div class="debug-menu" id="debugMenu">
+        <button class="menu-item" id="debugToggleOverlay">Toggle overlay</button>
+        <button class="menu-item" id="shuffleBtn">Shuffle</button>
+        <button class="menu-item" id="endTurnBtn">End Turn</button>
+      </div>
+    </div>
   </header>
 
   <div id="board" aria-label="Game board">
@@ -103,25 +144,44 @@
   </div>
 
   <div id="bottom">
-    <div style="display:flex;gap:8px;align-items:center;">
-      <button class="btn warn" id="shuffleBtn">Shuffle</button>
-      <button class="btn" id="endTurnBtn">End Turn</button>
-      <button class="btn" id="debugBtn" title="Toggle debug">Debug</button>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <span class="pill" id="powerHint">Press, drag across letters (diagonals ok), release to submit</span>
-    </div>
+    <div id="current-word">____</div>
   </div>
 </div>
 <div id="toast"></div>
 
+<!-- Tutorial modal (dentro del <body>) -->
+<div id="tutorial" class="modal" data-backdrop hidden>
+  <div class="modal-panel">
+    <h3>How to play</h3>
+    <ol>
+      <li>Press and drag across adjacent letters (diagonals ok) to form a word.</li>
+      <li>Release to submit. If valid, tiles are removed and colors count toward goals.</li>
+      <li>Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.</li>
+      <li>Use a booster by tapping its tile, then tap a target.</li>
+    </ol>
+    <button id="closeTutorial" class="btn primary" style="margin-top:10px;">Got it</button>
+  </div>
+</div>
+
+<footer style="max-width:1080px;margin:16px auto 28px;padding:12px 16px;color:#333;font-size:14px;line-height:1.5;">
+  <strong>Boosters (actualizados):</strong>
+  <ul style="margin:8px 0 0 18px; padding:0;">
+    <li><strong>4 letras → 🔨 Block breaker:</strong> toca el booster y luego una ficha para romper solo esa pieza.</li>
+    <li><strong>5 letras → ➡️ Row breaker:</strong> toca el booster y luego una ficha para romper toda la fila.</li>
+    <li><strong>6 letras → ⬇️ Column breaker:</strong> toca el booster y luego una ficha para romper toda la columna.</li>
+    <li><strong>7+ letras → 🌈 Rainbow (comodín):</strong> úsalo dentro de una palabra; puede reemplazar cualquier letra/color.</li>
+  </ul>
+</footer>
+
 <script>
 (function(){
-  const size = 7;
+  /* === Tamaño del tablero === */
+  const COLS = 8, ROWS = 10; // 8x10
+
   const vowels = "AEIOU";
   const lettersBag = [..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
 
-  // Color weights for casual look
+  // Colores con pesos
   const COLOR_WEIGHTS = [
     {key:'yellow', weight:40, color:'#fcd34d'},
     {key:'green',  weight:30, color:'#34d399'},
@@ -135,61 +195,71 @@
     return {key:'yellow', color:'#fcd34d'};
   }
 
-  // === Helpers for readable text and tinting tiles ===
-  function hexToRgb(hex){
-    const h = hex.replace('#','');
-    const bigint = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
-    return { r:(bigint>>16)&255, g:(bigint>>8)&255, b:bigint&255 };
-  }
-  function relLuminance({r,g,b}){
-    const srgb = [r,g,b].map(v=>{
-      v/=255; return v<=0.03928? v/12.92 : Math.pow((v+0.055)/1.055,2.4);
-    });
-    return 0.2126*srgb[0]+0.7152*srgb[1]+0.0722*srgb[2];
-  }
-  function readableText(bgHex){
-    const L = relLuminance(hexToRgb(bgHex));
-    // simple threshold; if bright background -> dark text, else white text
-    return L > 0.5 ? '#111' : '#fff';
-  }
-  function tint(hex, amt){ // mix with white for subtle gradient top
-    const {r,g,b} = hexToRgb(hex);
-    const mix = (c)=>Math.min(255, Math.round(c + (255-c)*amt));
-    const rr = mix(r), gg = mix(g), bb = mix(b);
-    return '#'+[rr,gg,bb].map(v=>v.toString(16).padStart(2,'0')).join('');
-  }
+  // Helpers color/contraste
+  function hexToRgb(hex){ const h=hex.replace('#',''); const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+  function relLuminance({r,g,b}){ const s=[r,g,b].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}); return .2126*s[0]+.7152*s[1]+.0722*s[2]; }
+  function readableText(bg){ return relLuminance(hexToRgb(bg))>0.5 ? '#111' : '#fff'; }
+  function tint(hex,amt){ const {r,g,b}=hexToRgb(hex); const mix=c=>Math.min(255,Math.round(c+(255-c)*amt)); const rr=mix(r),gg=mix(g),bb=mix(b); return '#'+[rr,gg,bb].map(v=>v.toString(16).padStart(2,'0')).join(''); }
 
-  /* ==== DICCIONARIO BASE (local, reducido) ==== */
+  // Diccionario base + extra
   const wordList = ["ABLE","ABOUT","ACTION","AFTER","AGAIN","ALIGN","ALIVE","ALONG","ALWAYS","APPLE","ARROW","ARRAY","AUDIO","AWARE","BALANCE","BASIC","BEACH","BEFORE","BEGIN","BELONG","BLACK","BLOCK","BLOOM","BOARD","BOOST","BRAIN","BRAVE","BREAK","BRIDGE","BRIGHT","BUILD","BURN","CABLE","CANDY","CANVAS","CHAIN","CHAIR","CHARGE","CHECK","CIRCLE","CLASS","CLEAR","CLICK","CLOCK","CLOSE","CLOUD","COACH","CODE","COIN","COLOR","COMMON","COUNT","COURT","COVER","CRACK","CRAFT","CRISP","CROSS","CROWN","CRUSH","CRYSTAL","DAILY","DANCE","DARK","DATA","DEAL","DEEP","DESIGN","DIAMOND","DIGIT","DRAGON","DREAM","DRINK","DRIVE","DROP","EARLY","EARTH","EAST","EASY","ECHO","EDIT","ELITE","EMPTY","ENERGY","ENJOY","ENTER","EQUAL","ERROR","ESCAPE","EVENT","EXACT","EXPAND","EXTRA","FACE","FAIR","FALL","FAMILY","FAST","FIELD","FIGHT","FINAL","FIND","FIRE","FIRST","FISH","FLAME","FLASH","FLAT","FLIGHT","FLOAT","FLOOR","FLOWER","FOCUS","FOLD","FOLLOW","FORCE","FOREST","FORGE","FRAME","FREE","FRESH","FRIEND","FROZEN","FRUIT","FUTURE","GAIN","GAME","GATE","GEM","GHOST","GIFT","GLOW","GOAL","GOLD","GRASS","GREAT","GREEN","GRID","GROW","GUARD","GUIDE","HABIT","HALL","HAND","HARD","HEART","HELLO","HELP","HERO","HIGH","HILL","HINT","HOLD","HOME","HONOR","HOPE","HORSE","HOUR","HOUSE","HUMAN","IDEA","IMAGE","IMPACT","INDEX","INSIDE","INSPIRE","IRON","ISLAND","ITEM","IVORY","JAZZ","JOB","JOIN","JUMP","KEEP","KEY","KIND","KING","KNIFE","KNOW","LABEL","LAKE","LAMP","LAND","LASER","LAUGH","LEAD","LEARN","LEMON","LETTER","LEVEL","LIGHT","LIKE","LINE","LINK","LION","LIST","LOCAL","LOCK","LOGIC","LONG","LOOK","LOOP","LOUD","LOVE","LUCK","LUNCH","MACHINE","MAJOR","MAKE","MAP","MARK","MARKET","MASTER","MATCH","MATH","MEAL","MEET","MEMORY","METAL","METHOD","MIDDLE","MIGHT","MIND","MODEL","MONEY","MONTH","MOON","MORNING","MOTION","MOUSE","MOVE","MOVIE","MUSIC","NAME","NATION","NEAR","NEED","NEVER","NIGHT","NORTH","NOTE","NOVEL","NURSE","OBJECT","OCEAN","OFFICE","OPEN","ORANGE","ORDER","OTHER","OUTER","OWNER","OXYGEN","PACE","PACK","PAGE","PAINT","PALACE","PAPER","PARK","PART","PARTY","PAST","PATH","PEACE","PEOPLE","PHONE","PHOTO","PIANO","PICK","PIECE","PILOT","PLACE","PLAN","PLANE","PLANT","PLATE","PLAY","POINT","POWER","PRICE","PRIDE","PRIME","PRINT","PRIZE","PROBLEM","PROCESS","PRODUCT","PROFILE","PROGRAM","PROJECT","PROOF","PUBLIC","PULL","PURE","PURPLE","QUEEN","QUICK","QUIET","QUOTE","RACE","RADAR","RAIN","RAISE","RANGE","RAPID","RARE","RATE","REACH","READ","READY","REAL","REASON","RECORD","REFRESH","REGION","RELAX","REMAIN","REMOVE","REPAIR","REPEAT","REPORT","RESCUE","RESPECT","RESULT","RETURN","REVIEW","REWARD","RICH","RIDE","RIGHT","RING","RISE","RIVER","ROAD","ROCK","ROLE","ROLL","ROOF","ROOM","ROPE","ROSE","ROUND","ROUTE","ROYAL","RULE","RUN","SAFE","SALT","SAME","SAND","SAVE","SCALE","SCAN","SCENE","SCHOOL","SCIENCE","SCORE","SCREEN","SEA","SEASON","SEAT","SEED","SEE","SEEK","SELECT","SELL","SEND","SENSE","SERIES","SERVER","SET","SEVEN","SHADOW","SHAKE","SHAPE","SHARE","SHIFT","SHINE","SHIP","SHOCK","SHOP","SHORT","SHOT","SHOW","SIDE","SIGHT","SIGN","SIMPLE","SINCE","SISTER","SKILL","SKY","SLEEP","SLIDE","SMALL","SMART","SMILE","SMOKE","SNAKE","SNOW","SOAP","SOCIAL","SOFT","SOLAR","SOLID","SONG","SOON","SOUL","SOUND","SOURCE","SOUTH","SPACE","SPEAK","SPECIAL","SPEED","SPELL","SPEND","SPIRIT","SPORT","SPOT","SPRING","SQUARE","STABLE","STAGE","STAMP","STAR","START","STATE","STATUS","STAY","STEEL","STEP","STICK","STILL","STOCK","STONE","STORY","STREAM","STREET","STRONG","STUDY","STYLE","SUMMER","SUN","SUPER","SUPPLY","SURE","SURPRISE","SURVEY","SWEET","SWIM","SWORD","SYSTEM","TABLE","TAKE","TALENT","TALK","TARGET","TEAM","TECH","TEETH","TELL","TERM","TEST","TEXT","THANK","THEME","THEORY","THERE","THING","THINK","THREE","THROW","TICKET","TIME","TITLE","TODAY","TOGETHER","TONE","TOOL","TOUCH","TOWER","TOWN","TRACK","TRADE","TRAIL","TRAIN","TRAVEL","TREAT","TREE","TREND","TRIAL","TRICK","TRIP","TROPHY","TRUCK","TRUE","TRUST","TYPE","UNDER","UNION","UNIQUE","UNKNOWN","UNTIL","UPDATE","URBAN","USER","USUAL","VALUE","VERY","VIDEO","VIEW","VILLAGE","VISION","VISIT","VOICE","VOLUME","WAIT","WALK","WALL","WANT","WARM","WASH","WASTE","WATCH","WATER","WAVE","WAY","WEAR","WEATHER","WEEK","WELCOME","WEST","WHALE","WHAT","WHEEL","WHEN","WHERE","WHITE","WHO","WHOLE","WIDE","WILD","WILL","WIND","WINDOW","WINE","WING","WINNER","WINTER","WIRE","WISE","WISH","WOMAN","WONDER","WOOD","WORD","WORK","WORLD","WORTH","WRITE","WRONG","YARD","YEAR","YELLOW","YOUNG","YOUTH","ZEBRA","ZERO","ZOO"];
-  // Extra common words to improve offline hints & validation consistency
-  const commonExtra = [
-    'POOL','POOLS','BOOK','BOOKS','GAME','GAMES','WORD','WORDS','PLAY','PLAYS','PLAYER','CODE','CODES','TEST','TESTS','TIME','TIMES','WATER','LIGHT','WORLD','HELLO','HOUSE','GREEN','BLUE','YELLOW','BLACK','WHITE','STONE','FROZEN','BOMB','BOMBS','LEVEL','LEVELS','MOVE','MOVES','GOAL','GOALS','APPLE','PEAR','PEACH','LEMON','GRAPE','MANGO','BANANA','BERRY','TREE','TREES','STAR','STARS','MOON','ROOM','ROAD','POOLING'
-  ];
+  const commonExtra = ['POOL','POOLS','BOOK','BOOKS','GAME','GAMES','WORD','WORDS','PLAY','PLAYS','PLAYER','CODE','CODES','TEST','TESTS','TIME','TIMES','WATER','LIGHT','WORLD','HELLO','HOUSE','GREEN','BLUE','YELLOW','BLACK','WHITE','STONE','FROZEN','BOMB','BOMBS','LEVEL','LEVELS','MOVE','MOVES','GOAL','GOALS','APPLE','PEAR','PEACH','LEMON','GRAPE','MANGO','BANANA','BERRY','TREE','TREES','STAR','STARS','MOON','ROOM','ROAD','POOLING'];
   wordList.push(...commonExtra);
   const dictionary = new Set(wordList.map(w=>w.toUpperCase()));
-
-  /* prefijos para podar DFS (hint/debug) */
   const prefixes = new Set(); for(const w of wordList){ const u=w.toUpperCase(); for(let i=1;i<=u.length;i++) prefixes.add(u.slice(0,i)); }
 
   const boardEl = document.getElementById("board");
-  const levelEl = document.getElementById("level");
   const movesEl = document.getElementById("moves");
-  const wordEl = document.getElementById("current-word");
   const toastEl = document.getElementById("toast");
+  const debugBtn = document.getElementById("debugBtn");
+  const debugMenu = document.getElementById("debugMenu");
+  const debugToggleOverlayBtn = document.getElementById("debugToggleOverlay");
   const shuffleBtn = document.getElementById("shuffleBtn");
   const endTurnBtn = document.getElementById("endTurnBtn");
-  const debugBtn = document.getElementById("debugBtn");
+  const tutorialEl = document.getElementById('tutorial');
+  const closeTutorialBtn = document.getElementById('closeTutorial');
+
+  // DEBUG menu
+  if(debugBtn){
+    debugBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      debugMenu.classList.toggle('show');
+    });
+    document.addEventListener('click', (e)=>{
+      if(!debugMenu.contains(e.target) && e.target!==debugBtn){
+        debugMenu.classList.remove('show');
+      }
+    });
+  }
+  if(debugToggleOverlayBtn){
+    debugToggleOverlayBtn.addEventListener('click', ()=>{
+      debugMode=!debugMode;
+      debugToggleOverlayBtn.classList.toggle('primary', debugMode);
+      refreshDebugOverlay();
+    });
+  }
+  // Tutorial robusto + cierre por fondo
+  function maybeShowTutorial(){
+    try{ if(localStorage.getItem('lexica_tutorial_shown')) return; }catch(e){}
+    tutorialEl.hidden=false;
+  }
+  if(closeTutorialBtn){ closeTutorialBtn.addEventListener('click', ()=>{ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(e){} }); }
+  if(tutorialEl && tutorialEl.hasAttribute('data-backdrop')){
+    tutorialEl.addEventListener('click', (e)=>{ if(e.target===tutorialEl){ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(_){} } });
+  }
 
   let level=1, moves=20;
   let grid=[]; let selection=[]; let selecting=false;
   let hintTimer=null; const HINT_DELAY_MS=5000; let currentHint=null;
   let debugMode=false; let targeting=null; let selectingPointerId=null; let submitting=false;
 
-  function cellSizePx(){ const rect=boardEl.getBoundingClientRect(); return rect.height/size; }
+  function cellSizePx(){ const rect=boardEl.getBoundingClientRect(); return rect.height/ROWS; }
   function animateDestruction(indices){ (Array.isArray(indices)?indices:Array.from(indices)).forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('explode'); }); }
   function randLetter(){ const pick=lettersBag[Math.floor(Math.random()*lettersBag.length)]; return Math.random()<0.12?vowels[Math.floor(Math.random()*vowels.length)]:pick; }
-  function makeEmpty(){ grid=Array.from({length:size*size},()=>null); }
-  function idx(r,c){ return r*size+c; } function rc(i){ return [Math.floor(i/size),i%size]; } function inBounds(r,c){ return r>=0&&c>=0&&r<size&&c<size; }
+  function makeEmpty(){ grid=Array.from({length:ROWS*COLS},()=>null); }
+  function idx(r,c){ return r*COLS+c; } 
+  function rc(i){ return [Math.floor(i/COLS), i%COLS]; } 
+  function inBounds(r,c){ return r>=0&&c>=0&&r<ROWS&&c<COLS; }
 
   function newTile(){ const col=pickColor(); return {letter:randLetter(), colorKey:col.key, color:col.color, obstacle:null, frozen:false, power:null}; }
 
@@ -210,17 +280,21 @@
   }
 
   function placeInitial(){
-    for(let r=0;r<size;r++) for(let c=0;c<size;c++) grid[idx(r,c)]=newTile();
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[idx(r,c)]=newTile();
     if(level>=6) sprinkleObstacles("stone", Math.min(6, Math.floor(level/2)));
     if(level>=12) sprinkleObstacles("frozen", Math.min(7, Math.floor(level/2)));
     sprinkleBombs(Math.min(2, Math.floor((level+2)/6)));
   }
 
   function render(){
-    const tilesEl=document.getElementById("tiles"); tilesEl.innerHTML="";
+    const tilesEl=document.getElementById("tiles");
+    tilesEl.style.setProperty('--cols', COLS);
+    tilesEl.style.setProperty('--rows', ROWS);
+    boardEl.style.aspectRatio = `${COLS}/${ROWS}`;
+    tilesEl.innerHTML="";
     grid.forEach((cell,i)=>{
       const div=document.createElement("div"); div.className="tile"; div.dataset.i=i;
-      const [r,c]=rc(i); div.style.setProperty('--ty', '0px'); // sin desfase, grilla alineada
+      div.style.setProperty('--ty','0px');
       if(cell){
         if(cell.obstacle==="stone"){ div.classList.add("obstacle-stone"); div.textContent=""; }
         else if(cell.obstacle==="bomb"){ div.classList.add("obstacle-bomb"); const s=(cell.state||0); div.textContent= s>=2?"💥":(s>=1?"🧨🔥":"🧨"); }
@@ -234,10 +308,7 @@
           if(cell.frozen) div.classList.add("obstacle-frozen");
           if(cell.power){
             div.classList.add(cell.power);
-            // For rainbow, ensure text is readable regardless of conic bg
-            if(cell.power === "rainbow") {
-              div.style.color = '#111';
-            }
+            if(cell.power === "rainbow") div.style.color = '#111';
             const b=document.createElement("span"); b.className="badge";
             b.textContent = cell.power==="rainbow"?"🌈":(cell.power==="breaker"?"🔨":(cell.power==="row"?"➡️":"⬇️"));
             div.appendChild(b);
@@ -249,9 +320,7 @@
   }
 
   function isAdjacent(a,b){ const [ar,ac]=rc(a),[br,bc]=rc(b); return Math.max(Math.abs(ar-br),Math.abs(ac-bc))===1; }
-
-  /* ==== selección por ARRASTRE (Pointer Events) ==== */
-  function indexFromClientPoint(x,y){ const el=document.elementFromPoint(x,y); return Number(el?.dataset?.i ?? -1); }
+  const indexFromClientPoint=(x,y)=>Number((document.elementFromPoint(x,y)?.dataset?.i) ?? -1);
 
   function startSelect(i){
     clearTimeout(hintTimer); clearHint(); const t=grid[i];
@@ -269,42 +338,29 @@
     if(!selecting) return; selecting=false;
     if(selection.length>1 && selection[selection.length-1]===selection[0]){ clearSelection(); scheduleHint(); return; }
     if(selection.length<3){ clearSelection(); scheduleHint(); return; }
-    endSelect(); // async
+    endSelect();
   }
 
-  /* ==== Validación (local + online con caché) ==== */
+  // Validación (local + online)
   const onlineCache=new Map();
   async function onlineValid(u){
-    const lc = u.toLowerCase();
-    if(onlineCache.has(lc)) return onlineCache.get(lc);
-
-    async function tryFetch(timeoutMs){
-      const controller = new AbortController();
-      const t = setTimeout(()=>controller.abort(), timeoutMs);
-      try{
-        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lc)}`, {signal: controller.signal});
-        clearTimeout(t);
-        if(res.ok){
-          const js = await res.json();
-          return Array.isArray(js) && js.length>0;
-        }
+    const lc=u.toLowerCase(); if(onlineCache.has(lc)) return onlineCache.get(lc);
+    async function tryFetch(ms){
+      const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),ms);
+      try{ const r=await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lc)}`,{signal:ctl.signal}); clearTimeout(t);
+        if(r.ok){ const js=await r.json(); return Array.isArray(js)&&js.length>0; }
         return false;
       }catch(e){ clearTimeout(t); return false; }
     }
-
-    // First try with a longer timeout, then a quick retry
-    let ok = await tryFetch(2500);
-    if(!ok) ok = await tryFetch(1200);
-    onlineCache.set(lc, ok);
-    return ok;
+    let ok=await tryFetch(2500); if(!ok) ok=await tryFetch(1200); onlineCache.set(lc,ok); return ok;
   }
-  async function isValidWordAsync(word){ if(!word||word.length<3) return false; const u=word.toUpperCase(); if(dictionary.has(u)) return true; return await onlineValid(u); }
+  async function isValidWordAsync(w){ if(!w||w.length<3) return false; const u=w.toUpperCase(); if(dictionary.has(u)) return true; return await onlineValid(u); }
 
-  function getCurrentWord(){ return selection.map(i=>grid[i]?.letter||"").join(""); }
-  function drawPath(){ /* sin flechas */ }
+  const getCurrentWord=()=>selection.map(i=>grid[i]?.letter||"").join("");
+  function drawPath(){} // sin flechas
   function updateOrderBadges(){ document.querySelectorAll('.tile .ord').forEach(n=>n.remove()); selection.forEach((i,idx)=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(!el) return; const b=document.createElement('span'); b.className='ord'; b.textContent=(idx+1).toString(); el.appendChild(b); }); }
   function updateSelectionClasses(){ document.querySelectorAll(".tile").forEach(t=>t.classList.remove("selected")); selection.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add("selected"); }); drawPath(); updateOrderBadges(); }
-  function updateWordDisplay(){ wordEl.textContent=getCurrentWord()||"WORD"; }
+  function updateWordDisplay(){ const el=document.getElementById('current-word'); if(el){ const w=getCurrentWord(); el.textContent = w? w : '____'; } }
   function clearSelection(){ selection=[]; updateSelectionClasses(); updateWordDisplay(); document.querySelectorAll('.tile .ord').forEach(n=>n.remove()); }
 
   async function endSelect(){
@@ -313,24 +369,23 @@
     submitting=false;
   }
 
-  /* ==== Objetivos por color ==== */
+  // Objetivos por color
   let goals = {yellow:20, green:20, blue:20};
   const goalYEl=document.getElementById('goalY');
   const goalGEl=document.getElementById('goalG');
   const goalBEl=document.getElementById('goalB');
-  function updateGoalsUI(){ goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; }
-  function goalsComplete(){ return goals.yellow<=0 && goals.green<=0 && goals.blue<=0; }
+  const updateGoalsUI=()=>{ goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; };
+  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0;
 
-  /* ==== Score/Niveles mínimos para moves/avance ==== */
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  function nextLevel(){ level++; levelEl.textContent=level; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20}; updateGoalsUI(); makeEmpty(); placeInitial(); render(); refreshDebugOverlay(); toast("Level up"); }
+  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20}; updateGoalsUI(); makeEmpty(); placeInitial(); render(); refreshDebugOverlay(); toast("Level up"); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
-    if(len>=7) newPower="rainbow";      // 7+
-    else if(len===6) newPower="col";    // columna
-    else if(len===5) newPower="row";    // fila
-    else if(len===4) newPower="breaker";// bloque
+    if(len>=7) newPower="rainbow";
+    else if(len===6) newPower="col";
+    else if(len===5) newPower="row";
+    else if(len===4) newPower="breaker";
 
     const toRemove=new Set(selection);
     const colorCount={yellow:0,green:0,blue:0};
@@ -342,21 +397,27 @@
     const bombsToExplode=new Set();
     selection.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } } });
 
-    // piedras adyacentes a seleccion
+    // piedras adyacentes
     const stonesToRemove=new Set();
     toRemove.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(inBounds(nr,nc)){ const j=idx(nr,nc); if(grid[j] && grid[j].obstacle==="stone") stonesToRemove.add(j); } } });
 
-    // contar colores y eliminar seleccion
+    // contar colores + eliminar seleccion
     toRemove.forEach(i=>{ const t=grid[i]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[i]=null; });
     stonesToRemove.forEach(i=>grid[i]=null);
 
     // explotar bombas (cruz)
-    bombsToExplode.forEach(bi=>{ const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0;rr<size;rr++) affected.add(idx(rr,c)); for(let cc=0;cc<size;cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{ const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null; }); });
+    bombsToExplode.forEach(bi=>{ const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{ const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null; }); });
 
-    // drop power en última celda de selección si queda libre
-    if(newPower){ const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last; if(tIdx!=null) grid[tIdx]={letter:newPower==="rainbow"?"*":randLetter(), colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower}; document.getElementById("powerHint").textContent="You created a power up"; }
+    // power-up
+    if(newPower){
+      const last=selection[selection.length-1];
+      let tIdx=last;
+      if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last;
+      if(tIdx!=null) grid[tIdx]={letter:newPower==="rainbow"?"*":randLetter(), colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower};
+      toast("Power-up created!");
+    }
 
-    // aplicar objetivos por color
+    // aplicar objetivos
     goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0));
     goals.green =Math.max(0,goals.green -(colorCount.green ||0));
     goals.blue  =Math.max(0,goals.blue  -(colorCount.blue  ||0));
@@ -374,9 +435,9 @@
 
   function applyGravity(){
     const moves={};
-    for(let c=0;c<size;c++){
-      let write=size-1;
-      for(let r=size-1;r>=0;r--){
+    for(let c=0;c<COLS;c++){
+      let write=ROWS-1;
+      for(let r=ROWS-1;r>=0;r--){
         const i=idx(r,c), cell=grid[i];
         if(cell){
           if(cell.obstacle==="stone"){ write=r-1; continue; }
@@ -387,101 +448,83 @@
     }
     return moves;
   }
-  function refill(){ for(let c=0;c<size;c++) for(let r=0;r<size;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
+  function refill(){ for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
 
   function flashGlow(indexes){ indexes.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add("glow"); setTimeout(()=>el.classList.remove("glow"),900); } }); }
   function shakeBoard(){ boardEl.animate([{transform:"translateX(0)"},{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"translateX(0)"}],{duration:220}); toast("Not a valid word"); }
   function toast(msg){ toastEl.textContent=msg; toastEl.style.opacity=1; clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.style.opacity=0,1200); }
 
-  /* ==== Boosters (targeting) ==== */
+  // Boosters -> targeting
   function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); const msg = type==='breaker'? 'Choose a tile to break' : (type==='row'? 'Choose any tile in the row' : (type==='col'? 'Choose any tile in the column' : 'Choose where to use wildcard')); toast(msg); }
   function applyTargeting(target){
     if(!targeting) return;
     const {type,from}=targeting; const affected=new Set();
     if(type==='breaker'){ affected.add(target); }
-    else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<size;cc++) affected.add(idx(r,cc)); }
-    else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<size;rr++) affected.add(idx(rr,c)); }
+    else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
+    else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){ affected.add(target); }
 
-    // play explosion anim first
     animateDestruction(affected);
-
-    // after animation, actually remove and count colors toward objectives
     setTimeout(()=>{
       const colorCount = {yellow:0, green:0, blue:0};
-      affected.forEach(j=>{
-        const t = grid[j];
-        if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null){
-          colorCount[t.colorKey]++;
-        }
-        grid[j] = null;
-      });
-
-      // consume the power-up from its origin tile
+      affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
       if(grid[from]) grid[from].power=null;
 
-      // apply color objectives decrement and refresh UI
-      goals.yellow = Math.max(0, goals.yellow - (colorCount.yellow||0));
-      goals.green  = Math.max(0, goals.green  - (colorCount.green ||0));
-      goals.blue   = Math.max(0, goals.blue   - (colorCount.blue  ||0));
+      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0));
+      goals.green =Math.max(0,goals.green -(colorCount.green ||0));
+      goals.blue  =Math.max(0,goals.blue  -(colorCount.blue  ||0));
       updateGoalsUI();
 
       const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay();
-      const px=cellSizePx();
-      Object.entries(movesMap).forEach(([to,d])=>{
-        const el=boardEl.querySelector(`.tile[data-i='${to}']`);
-        if(el) el.style.setProperty('--fall',`${-d*px}px`);
-      });
-      requestAnimationFrame(()=>{
-        Object.keys(movesMap).forEach(to=>{
-          const el=boardEl.querySelector(`.tile[data-i='${to}']`);
-          if(el) el.style.setProperty('--fall','0px');
-        });
-      });
+      const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); });
+      requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); });
 
-      // check level completion via objectives after booster use
       if(goalsComplete()){ toast("Objectives complete!"); nextLevel(); return; }
     },260);
 
     targeting=null; boardEl.classList.remove('targeting');
   }
 
-  /* ==== Eventos Pointer ==== */
+  // Eventos pointer
   boardEl.addEventListener('pointerdown',(e)=>{ const i=indexFromClientPoint(e.clientX,e.clientY); if(i<0) return; const t=grid[i]; if(targeting){ applyTargeting(i); return;} if(!selecting && t && t.power && (t.power==='breaker'||t.power==='row'||t.power==='col'||t.power==='rainbow')){ enterTargeting(t.power,i); return;} startSelect(i); try{ boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId; }catch{} });
   boardEl.addEventListener('pointermove',(e)=>{ if(!selecting) return; const i=indexFromClientPoint(e.clientX,e.clientY); if(i>=0) extendTo(i); });
   boardEl.addEventListener('pointerup',(e)=>{ if(selecting) finishSelect(); if(selectingPointerId!=null){ try{ boardEl.releasePointerCapture(selectingPointerId);}catch{} selectingPointerId=null; } });
 
-  /* ==== Hint ==== */
+  // Hint
   function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(el=>el.classList.remove('hint')); }
   function scheduleHint(){ clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ showAnyHint(); }, HINT_DELAY_MS); }
   function showHintPath(path){ path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('hint'); }); }
-  function showAnyHint(){ clearHint(); const visited=new Array(size*size).fill(false); const maxLen=6; let found=null; function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!prefixes.has(word)) return; if(word.length>=3 && dictionary.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; } } for(let i=0;i<size*size && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; } if(found){ currentHint=found; showHintPath(found); } }
+  function showAnyHint(){ clearHint(); const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null; function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!prefixes.has(word)) return; if(word.length>=3 && dictionary.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; } } for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; } if(found){ currentHint=found; showHintPath(found); } }
 
-  /* ==== Debug ==== */
+  // Debug
   function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
   function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const {path}=list[n]; path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('debug'); }); } }
-  function findAllWordsOnBoard(){ const results=[]; const visited=new Array(size*size).fill(false); const maxLen=7; function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!prefixes.has(word)) return; if(word.length>=3 && dictionary.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } } for(let i=0;i<size*size;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; } return results; }
+  function findAllWordsOnBoard(){ const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7; function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!prefixes.has(word)) return; if(word.length>=3 && dictionary.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } } for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; } return results; }
   function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } const list=findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
 
-  /* ==== Botones ==== */
+  // Botones
   shuffleBtn.addEventListener("click", ()=>{ const letters=grid.map(cell=>cell && !cell.obstacle ? cell.letter : null).filter(Boolean); for(let i=letters.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [letters[i],letters[j]]=[letters[j],letters[i]]; } let k=0; grid.forEach(cell=>{ if(cell && !cell.obstacle) cell.letter=letters[k++]; }); render(); toast("Shuffled"); scheduleHint(); refreshDebugOverlay(); });
   endTurnBtn.addEventListener("click", ()=>{ spendMove(); if(moves===0){ toast("Out of moves"); nextLevel(); } else { toast("Turn ended"); } });
-  if(debugBtn) debugBtn.addEventListener('click', ()=>{ debugMode=!debugMode; debugBtn.classList.toggle('primary',debugMode); refreshDebugOverlay(); });
 
-  /* ==== Init ==== */
-  function init(){ level=1; moves=20; levelEl.textContent=level; movesEl.textContent=moves; makeEmpty(); placeInitial(); render(); updateGoalsUI(); scheduleHint(); }
+
+  // Para usar tus PNGs: setea rutas aquí (opcional)
+  function setBoosterIcons(urlBreaker, urlRow, urlCol, urlRainbow){
+    const root=document.documentElement;
+    if(urlBreaker) root.style.setProperty('--img-breaker', `url(${urlBreaker})`);
+    if(urlRow)     root.style.setProperty('--img-row',     `url(${urlRow})`);
+    if(urlCol)     root.style.setProperty('--img-col',     `url(${urlCol})`);
+    if(urlRainbow) root.style.setProperty('--img-rainbow', `url(${urlRainbow})`);
+  }
+
+  // Init
+  function init(){
+    moves=20; movesEl.textContent=moves;
+    makeEmpty(); placeInitial(); render(); updateGoalsUI(); scheduleHint(); maybeShowTutorial();
+    // Ejemplo: reemplazá con rutas reales de tu repo
+    // setBoosterIcons('assets/breaker.png','assets/row.png','assets/col.png','assets/rainbow.png');
+  }
   init();
 })();
 </script>
-
-<footer style="max-width:1080px;margin:16px auto 28px;padding:12px 16px;color:#333;font-size:14px;line-height:1.5;">
-  <strong>Boosters (actualizados):</strong>
-  <ul style="margin:8px 0 0 18px; padding:0;">
-    <li><strong>4 letras → 🔨 Block breaker:</strong> toca el booster y luego una ficha para romper solo esa pieza.</li>
-    <li><strong>5 letras → ➡️ Row breaker:</strong> toca el booster y luego una ficha para romper toda la fila.</li>
-    <li><strong>6 letras → ⬇️ Column breaker:</strong> toca el booster y luego una ficha para romper toda la columna.</li>
-    <li><strong>7+ letras → 🌈 Rainbow (comodín):</strong> úsalo dentro de una palabra; puede reemplazar cualquier letra/color.</li>
-  </ul>
-</footer>
 </body>
 </html>
