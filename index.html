@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Lexica Realms - MVP</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' ry='12' fill='%23ffffff'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='44'%3E🔤%3C/text%3E%3C/svg%3E">
 <style>
   :root{
     --blue:#77b7ff; --lilac:#c3a5ff; --shadow: rgba(0,0,0,0.12); --ink:#111;
@@ -75,9 +76,13 @@
 
   .tile.obstacle-stone{background:#bfc4cc;color:transparent;}
   .tile.obstacle-frozen{background:linear-gradient(135deg,#c9f2ff,#b6e0ff);} 
+  .tile.obstacle-ice{background:linear-gradient(135deg,#c9f2ff,#b6e0ff);} 
   .tile.obstacle-bomb{background:radial-gradient(circle at 50% 40%, #444, #222); color:#fff; font-size: 24px;}
   .tile .badge{position:absolute;bottom:6px;right:6px;font-size:12px;font-weight:800;background:#111;color:#fff;padding:2px 6px;border-radius:999px;letter-spacing:.2px;opacity:.9;}
   .tile .ord{position:absolute; top:6px; left:6px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; background:#111; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2);} 
+  /* Large emoji when tile is a booster */
+  .tile.power-emoji{ font-size: clamp(34px, 9.5vw, 68px); line-height: 1; }
+  .tile .corner-ice{ position:absolute; top:6px; left:6px; font-size:16px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
   .tile.hint{ box-shadow: 0 0 0 3px #000 inset, 0 6px 18px rgba(0,0,0,.35); }
   .tile.debug{ outline:3px dashed rgba(255,0,110,.6); outline-offset:-3px; }
@@ -114,11 +119,12 @@
       <div class="goals-bar">
         <div class="goal-item"><div class="goal-swatch" style="background:#60a5fa"></div><div class="goal-num" id="goalB">20</div></div>
         <div class="goal-item"><div class="goal-swatch" style="background:#fcd34d"></div><div class="goal-num" id="goalY">20</div></div>
-        <div class="goal-item"><div class="goal-swatch" style="background:#a78bfa"></div><div class="goal-num" id="goalG">20</div></div>
+        <div class="goal-item"><div class="goal-swatch" style="background:#34d399"></div><div class="goal-num" id="goalG">20</div></div>
+        <div class="goal-item"><div class="goal-swatch" style="display:flex;align-items:center;justify-content:center;background:#b6e0ff;color:#114;font-size:18px;">🧊</div><div class="goal-num" id="goalIce">6</div></div>
       </div>
     </div>
     <div class="debug-wrap">
-      <button class="debug-badge" id="debugBtn" title="Open debug menu">DEBUG</button>
+      <button class="debug-badge" id="debugBtn" title="Open debug menu" aria-label="Debug">🪲</button>
       <div class="debug-menu" id="debugMenu">
         <div style="padding:6px 8px 2px 8px;font-weight:800;opacity:.8;">Idioma / Language</div>
         <select id="langSelect" class="menu-item" style="box-shadow:none;border:1px solid #ddd;">
@@ -250,22 +256,37 @@
   const randLetter=()=>{const pick=lettersBag[Math.floor(Math.random()*lettersBag.length)];return Math.random()<0.12?vowels[Math.floor(Math.random()*vowels.length)]:pick;};
   const newTile=()=>{const col=pickColor();return{letter:randLetter(),colorKey:col.key,color:col.color,obstacle:null,frozen:false,power:null}};
 
+  function placeIceBlockers(){
+    // Coordinates are (row, col), 0-indexed as provided
+    const coords=[[1,1],[1,6],[4,3],[4,4],[7,1],[7,6]];
+    for(const [r,c] of coords){ if(inBounds(r,c)){ const i=idx(r,c); grid[i]={letter:null,colorKey:null,color:'#b6e0ff',obstacle:'ice',frozen:false,power:null}; } }
+  }
+
   function makeEmpty(){grid=Array.from({length:ROWS*COLS},()=>null);}
   function placeInitial(){for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[idx(r,c)]=newTile();}
 
   function render(){
     tilesEl.innerHTML='';
+    const cs=getComputedStyle(tilesEl); const gap=parseFloat(cs.gap)||0; const h=tilesEl.clientHeight; const trackH=(h - (ROWS-1)*gap)/ROWS; const emojiSize=Math.max(18, Math.floor(trackH*0.82));
     grid.forEach((cell,i)=>{
       const div=document.createElement('div'); div.className='tile'; div.dataset.i=i;
       if(cell){
         if(cell.obstacle==='stone'){div.classList.add('obstacle-stone');}
         else if(cell.obstacle==='bomb'){div.classList.add('obstacle-bomb'); div.textContent='🧨';}
+        else if(cell.obstacle==='ice'){div.classList.add('obstacle-ice'); const span=document.createElement('span'); span.textContent='🧊'; span.style.fontSize=emojiSize+'px'; div.appendChild(span);}
         else{
-          div.textContent=cell.letter;
+          // Background and text color
           const top=tint(cell.color,.22); div.style.background=`linear-gradient(135deg, ${top}, ${cell.color})`;
           div.style.color=readable(cell.color);
-          if(cell.frozen) div.classList.add('obstacle-frozen');
-          if(cell.power){ div.classList.add(cell.power); const b=document.createElement('span'); b.className='badge'; b.textContent=cell.power==='rainbow'?'🌈':(cell.power==='breaker'?'🔨':(cell.power==='row'?'➡️':'⬇️')); div.appendChild(b); }
+          // Frozen overlay
+          if(cell.frozen){ div.classList.add('obstacle-frozen'); const ice=document.createElement('span'); ice.className='corner-ice'; ice.textContent='🧊'; div.appendChild(ice); }
+          // Booster emoji replaces the letter completely
+          if(cell.power){
+            const emoji = cell.power==='rainbow'?'🃏':(cell.power==='breaker'?'🔨':(cell.power==='row'?'↔️':'↕️'));
+            const span=document.createElement('span'); span.className='booster-emoji'; span.textContent=emoji; span.style.fontSize=emojiSize+'px'; div.appendChild(span); div.classList.add('power-emoji');
+          }else{
+            div.textContent=cell.letter;
+          }
         }
       }else div.style.visibility='hidden';
       tilesEl.appendChild(div);
@@ -273,15 +294,30 @@
   }
 
   const isAdjacent=(a,b)=>{const[ar,ac]=rc(a),[br,bc]=rc(b);return Math.max(Math.abs(ar-br),Math.abs(ac-bc))===1;}
-  const indexFromPoint=(x,y)=>Number((document.elementFromPoint(x,y)?.dataset?.i) ?? -1);
+  const indexFromPoint=(x,y)=>{ const el=document.elementFromPoint(x,y); const tile=el && el.closest ? el.closest('.tile') : null; return tile ? Number(tile.dataset.i) : -1; };
 
   function getCurrentWord(){return selection.map(i=>grid[i]?.letter||'').join('');}
   function updateWordDisplay(){const el=document.getElementById('current-word'); if(!el) return; const w=getCurrentWord(); el.textContent=w ? w : '____';}
-  function updateSelClasses(){document.querySelectorAll('.tile').forEach(t=>t.classList.remove('selected')); selection.forEach(i=>{const el=tilesEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('selected');}); updateWordDisplay();}
+  function updateSelClasses(){
+    document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); const o=t.querySelector('.ord'); if(o) o.remove(); });
+    selection.forEach((i,ord)=>{ const el=tilesEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('selected'); const s=document.createElement('span'); s.className='ord'; s.textContent=String(ord+1); el.appendChild(s);} });
+    updateWordDisplay();
+  }
   function clearSelection(){selection=[]; updateSelClasses();}
 
-  function startSelect(i){clearTimeout(hintTimer); if(submitting) return; const t=grid[i]; if(!t || t.obstacle==='stone' || t.obstacle==='bomb') return; selecting=true; selection=[i]; updateSelClasses();}
-  function extendTo(i){if(!selecting) return; if(i<0) return; const t=grid[i]; if(!t || t.obstacle==='stone' || t.obstacle==='bomb') return; const last=selection[selection.length-1]; if(i===last) return; if(selection.length>=2 && i===selection[selection.length-2]){selection.pop(); updateSelClasses(); return;} const pos=selection.indexOf(i); if(pos!==-1){selection=selection.slice(0,pos+1); updateSelClasses(); return;} if(isAdjacent(last,i)){selection.push(i); updateSelClasses();}}
+  function startSelect(i){
+    clearTimeout(hintTimer); if(submitting) return; const t=grid[i];
+    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || t.obstacle==='ice' || t.power) return; // power tiles and ice are not letters
+    selecting=true; selection=[i]; updateSelClasses();
+  }
+  function extendTo(i){
+    if(!selecting) return; if(i<0) return; const t=grid[i];
+    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || t.obstacle==='ice' || t.power) return; // skip power/ice
+    const last=selection[selection.length-1]; if(i===last) return;
+    if(selection.length>=2 && i===selection[selection.length-2]){selection.pop(); updateSelClasses(); return;}
+    const pos=selection.indexOf(i); if(pos!==-1){selection=selection.slice(0,pos+1); updateSelClasses(); return;}
+    if(isAdjacent(last,i)){selection.push(i); updateSelClasses();}
+  }
   function finishSelect(){if(!selecting) return; selecting=false; if(selection.length>1 && selection[selection.length-1]===selection[0]){clearSelection(); scheduleHint(); return;} if(selection.length<3){clearSelection(); scheduleHint(); return;} endSelect();}
 
   async function isValidWordAsync(w){ if(!w||w.length<3) return false; const u=w.toUpperCase(); const {dict}=await loadDictionary(currentLang); return dict.has(u); }
@@ -292,13 +328,13 @@
   async function endSelect(){ if(submitting) return; submitting=true; const w=getCurrentWord(); const ok=await isValidWordAsync(w); if(!ok){shakeBoard(); clearSelection(); scheduleHint(); submitting=false; return;} resolveWord(w); submitting=false; }
 
   // Goals by color
-  let goals={yellow:20, green:20, blue:20};
-  const goalYEl=document.getElementById('goalY'); const goalGEl=document.getElementById('goalG'); const goalBEl=document.getElementById('goalB');
-  const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue;};
-  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0;
+  let goals={yellow:20, green:20, blue:20, ice:6};
+  const goalYEl=document.getElementById('goalY'); const goalGEl=document.getElementById('goalG'); const goalBEl=document.getElementById('goalB'); const goalIceEl=document.getElementById('goalIce');
+  const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; if(goalIceEl) goalIceEl.textContent=goals.ice??0;};
+  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && (goals.ice??0)<=0;
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20}; updateGoalsUI(); makeEmpty(); placeInitial(); render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); }
+  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:6}; updateGoalsUI(); makeEmpty(); placeInitial(); placeIceBlockers(); render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
@@ -307,14 +343,23 @@
     const colorCount={yellow:0,green:0,blue:0};
     selection.forEach(i=>{const t=grid[i]; if(t && t.frozen){ t.frozen=false; toRemove.delete(i); }});
     const bombsToExplode=new Set();
+    // Break adjacent ICE blockers -> convert to fresh letters and count towards ice goal
+    const iceToBreak=new Set();
+    selection.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ const nr=r+dr,nc=c+dc; if(dr===0&&dc===0) continue; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='ice') iceToBreak.add(j); }});
     selection.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } }});
     const stonesToRemove=new Set();
     toRemove.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(inBounds(nr,nc)){ const j=idx(nr,nc); if(grid[j] && grid[j].obstacle==='stone') stonesToRemove.add(j); } }});
     toRemove.forEach(i=>{const t=grid[i]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[i]=null;});
     stonesToRemove.forEach(i=>grid[i]=null);
+    let iceBrokenCount=0;
+    iceToBreak.forEach(j=>{ grid[j]=newTile(); iceBrokenCount++; });
     bombsToExplode.forEach(bi=>{const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null;});});
-    if(newPower){ const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last; if(tIdx!=null) grid[tIdx]={letter:newPower==='rainbow'?'*':randLetter(), colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower}; toast(STRINGS[currentLang].powerCreated); }
-    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); updateGoalsUI();
+    if(newPower){
+      const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last;
+      if(tIdx!=null) grid[tIdx]={letter:'', colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower};
+      toast(STRINGS[currentLang].powerCreated);
+    }
+    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount); updateGoalsUI();
     const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay();
     const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`);}); requestAnimationFrame(()=>{Object.keys(movesMap).forEach(to=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px');});});
     clearSelection(); spendMove();
@@ -322,17 +367,28 @@
     if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); }
   }
 
-  function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
+  function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone' || cell.obstacle==='ice'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
   function refill(){ for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
 
   function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); }
   function scheduleHint(){ clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ showAnyHint(); }, HINT_DELAY_MS); }
   function showHintPath(path){ path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('hint'); }); }
-  async function showAnyHint(){ clearHint(); const {dict,pref}=await loadDictionary(currentLang); const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null; function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }} for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; } if(found){ currentHint=found; showHintPath(found); } }
+  async function showAnyHint(){
+    clearHint(); const {dict,pref}=await loadDictionary(currentLang);
+    const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null;
+    function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }}
+    for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; }
+    if(found){ currentHint=found; showHintPath(found); }
+  }
 
   function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
   function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const {path}=list[n]; path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('debug'); }); } }
-  async function findAllWordsOnBoard(){ const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7; function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } } for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; } return results; }
+  async function findAllWordsOnBoard(){
+    const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7;
+    function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } }
+    for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; }
+    return results;
+  }
   async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
 
   // Events
@@ -367,11 +423,11 @@
 
   async function init(){
     moves=20; movesEl.textContent=moves;
-    makeEmpty(); placeInitial(); render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
+    makeEmpty(); placeInitial(); placeIceBlockers(); render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
     loadDictionary(currentLang).then(()=>{ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
-    // set sprites from your repo
-    setBoosterIcons('sprites/hammer.png','sprites/row_breaker.png','sprites/column_breaker.png','sprites/wildcard.png');
+    // No sprites: boosters use emojis now
+    window.addEventListener('resize', ()=>{ render(); });
     // set selector value + listener
     const langSelect=document.getElementById('langSelect');
     if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async ()=>{ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
