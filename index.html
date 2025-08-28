@@ -309,7 +309,7 @@
   const isAdjacent=(a,b)=>{const[ar,ac]=rc(a),[br,bc]=rc(b);return Math.max(Math.abs(ar-br),Math.abs(ac-bc))===1;}
   const indexFromPoint=(x,y)=>{ const el=document.elementFromPoint(x,y); const tile=el && el.closest ? el.closest('.tile') : null; return tile ? Number(tile.dataset.i) : -1; };
 
-  function getCurrentWord(){return selection.map(i=>grid[i]?.letter||'').join('');}
+  function getCurrentWord(){ return selection.map(function(i){ return (grid[i] && grid[i].letter) || ''; }).join(''); }
   function updateWordDisplay(){const el=document.getElementById('current-word'); if(!el) return; const w=getCurrentWord(); el.textContent=w ? w : '____';}
   function updateSelClasses(){
     document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); const o=t.querySelector('.ord'); if(o) o.remove(); });
@@ -343,8 +343,8 @@
   // Goals by color
   let goals={yellow:20, green:20, blue:20, ice:6};
   const goalYEl=document.getElementById('goalY'); const goalGEl=document.getElementById('goalG'); const goalBEl=document.getElementById('goalB'); const goalIceEl=document.getElementById('goalIce');
-  const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; if(goalIceEl) goalIceEl.textContent=goals.ice??0;};
-  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && (goals.ice??0)<=0;
+  const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; if(goalIceEl) goalIceEl.textContent=(goals.ice!=null?goals.ice:0);};
+  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && ((goals.ice!=null?goals.ice:0)<=0);
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
   function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:6}; updateGoalsUI(); makeEmpty(); placeInitial(); placeIceBlockers(); render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); }
@@ -368,7 +368,7 @@
     iceToBreak.forEach(j=>{ grid[j]=newTile(); iceBrokenCount++; });
     bombsToExplode.forEach(bi=>{const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null;});});
     if(newPower){
-      const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last;
+      const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null){ var arr=Array.from(toRemove); tIdx = (arr.length>0?arr[0]:last); }
       if(tIdx!=null) grid[tIdx]={letter:'', colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower};
       toast(STRINGS[currentLang].powerCreated);
     }
@@ -389,7 +389,7 @@
   async function showAnyHint(){
     clearHint(); const {dict,pref}=await loadDictionary(currentLang);
     const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null;
-    function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }}
+    function dfs(path){ if(found) return; var word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }}
     for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; }
     if(found){ currentHint=found; showHintPath(found); }
   }
@@ -398,7 +398,7 @@
   function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const {path}=list[n]; path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('debug'); }); } }
   async function findAllWordsOnBoard(){
     const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7;
-    function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } }
+    function dfs(path){ const word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } }
     for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; }
     return results;
   }
