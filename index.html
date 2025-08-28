@@ -248,7 +248,20 @@
   tilesEl.style.setProperty('--rows',ROWS);
   boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
 
-  const cellSizePx=()=>boardEl.getBoundingClientRect().height/ROWS;
+  function ensureBoardSize(){
+    const rect=boardEl.getBoundingClientRect();
+    if(rect.height<10){
+      const w=boardEl.clientWidth || boardEl.getBoundingClientRect().width || 320;
+      boardEl.style.height = Math.round(w * (ROWS/COLS)) + 'px';
+    }
+  }
+
+  const cellSizePx=()=>{
+    const h=boardEl.getBoundingClientRect().height;
+    if(h>0) return h/ROWS;
+    const w=boardEl.getBoundingClientRect().width;
+    return (w*(ROWS/COLS))/ROWS;
+  };
   const idx=(r,c)=>r*COLS+c;
   const rc=i=>[Math.floor(i/COLS),i%COLS];
   const inBounds=(r,c)=>r>=0&&c>=0&&r<ROWS&&c<COLS;
@@ -396,6 +409,16 @@
   boardEl.addEventListener('pointermove',(e)=>{if(!selecting) return; const i=indexFromPoint(e.clientX,e.clientY); if(i>=0) extendTo(i);});
   boardEl.addEventListener('pointerup',()=>{if(selecting) finishSelect(); if(selectingPointerId!=null){try{boardEl.releasePointerCapture(selectingPointerId);}catch{} selectingPointerId=null;}});
 
+  // Touch fallback (iOS Safari)
+  boardEl.addEventListener('touchstart',(e)=>{
+    if(!e.touches || e.touches.length===0) return; const t=e.touches[0]; e.preventDefault();
+    const i=indexFromPoint(t.clientX,t.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const cell=grid[i]; if(!selecting && cell && cell.power){ enterTargeting(cell.power,i); return;} startSelect(i); }
+  }, {passive:false});
+  boardEl.addEventListener('touchmove',(e)=>{
+    if(!e.touches || e.touches.length===0) return; const t=e.touches[0]; e.preventDefault(); if(!selecting) return; const i=indexFromPoint(t.clientX,t.clientY); if(i>=0) extendTo(i);
+  }, {passive:false});
+  boardEl.addEventListener('touchend',()=>{ if(selecting) finishSelect(); });
+
   // Boosters targeting (unchanged core)
   function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); }
   function applyTargeting(target){
@@ -423,11 +446,12 @@
 
   async function init(){
     moves=20; movesEl.textContent=moves;
+    ensureBoardSize();
     makeEmpty(); placeInitial(); placeIceBlockers(); render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
     loadDictionary(currentLang).then(()=>{ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
     // No sprites: boosters use emojis now
-    window.addEventListener('resize', ()=>{ render(); });
+    window.addEventListener('resize', ()=>{ ensureBoardSize(); render(); });
     // set selector value + listener
     const langSelect=document.getElementById('langSelect');
     if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async ()=>{ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
