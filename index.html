@@ -6,13 +6,11 @@
 <title>Lexica Realms - MVP</title>
 <style>
   :root{
-    --pastel1:#cfe9ff; --pastel2:#c9fff0; --pastel3:#f8f1d2; --pastel4:#e8d6ff; --pastel5:#ffe7e0;
     --blue:#77b7ff; --lilac:#c3a5ff; --shadow: rgba(0,0,0,0.12); --ink:#111;
-    /* Booster icons (configurá las URLs si querés usar tus PNGs) */
-    --img-breaker: "";   /* url(assets/breaker.png) */
-    --img-row: "";       /* url(assets/row.png) */
-    --img-col: "";       /* url(assets/col.png) */
-    --img-rainbow: "";   /* url(assets/rainbow.png) */
+    --img-breaker: "";   /* url(sprites/hammer.png) */
+    --img-row: "";       /* url(sprites/row_breaker.png) */
+    --img-col: "";       /* url(sprites/column_breaker.png) */
+    --img-rainbow: "";   /* url(sprites/wildcard.png) */
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:none;}
   body{
@@ -37,7 +35,7 @@
   .pill{background:#fff;padding:8px 12px;border-radius:999px;box-shadow:0 2px 6px var(--shadow);font-weight:800;}
 
   .debug-wrap{position:relative;}
-  .debug-menu{position:absolute; right:0; top:44px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.2); padding:8px; display:none; z-index:10; min-width:180px;}
+  .debug-menu{position:absolute; right:0; top:44px; background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.2); padding:8px; display:none; z-index:10; min-width:200px;}
   .debug-menu.show{display:block;}
   .debug-menu .menu-item{display:block; width:100%; text-align:left; border:none; background:#fff; padding:10px 12px; border-radius:10px; font-weight:700; box-shadow:0 2px 6px var(--shadow); margin:6px 0;}
   .debug-menu .menu-item.primary{background:var(--blue); color:#fff;}
@@ -70,7 +68,6 @@
   .tile.glow{ animation: glow 800ms ease-out; }
   @keyframes glow{ 0%{ filter: drop-shadow(0 0 0 rgba(255,255,255,0)); } 50%{ filter: drop-shadow(0 0 12px rgba(255,255,255,1)); } 100%{ filter: drop-shadow(0 0 0 rgba(255,255,255,0)); } }
 
-  /* explode + fall */
   .tile.explode{ animation: explode .22s ease-out forwards; }
   @keyframes explode{ 0%{ transform: translateY(calc(var(--ty) + var(--fall, 0px))) scale(1); opacity:1; } 100%{ transform: translateY(calc(var(--ty) - 12px)) scale(.6); opacity:0; filter: blur(1px); } }
   .tile.fall{ animation: fall .18s ease-out; }
@@ -82,35 +79,26 @@
   .tile .badge{position:absolute;bottom:6px;right:6px;font-size:12px;font-weight:800;background:#111;color:#fff;padding:2px 6px;border-radius:999px;letter-spacing:.2px;opacity:.9;}
   .tile .ord{position:absolute; top:6px; left:6px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; background:#111; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2);} 
 
-  /* Hint + Debug */
   .tile.hint{ box-shadow: 0 0 0 3px #000 inset, 0 6px 18px rgba(0,0,0,.35); }
   .tile.debug{ outline:3px dashed rgba(255,0,110,.6); outline-offset:-3px; }
 
-  /* Booster icons (image fallback a emoji) */
-  .tile.breaker::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-breaker);}
-  .tile.breaker:not([style*="--img-breaker"])::after{content:"🔨"; background-image:none; width:auto; height:auto; font-size:16px;}
-
-  .tile.row::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-row);} 
-  .tile.row:not([style*="--img-row"])::after{content:"➡️"; background-image:none; width:auto; height:auto; font-size:16px;}
-
-  .tile.col::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-col);} 
-  .tile.col:not([style*="--img-col"])::after{content:"⬇️"; background-image:none; width:auto; height:auto; font-size:16px;}
-
-  .tile.rainbow::after{content:""; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-rainbow);} 
-  .tile.rainbow:not([style*="--img-rainbow"])::after{content:"🌈"; background-image:none; width:auto; height:auto; font-size:16px;}
+  .tile.breaker::after{content:\"\"; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-breaker);}
+  .tile.breaker:not([style*=\"--img-breaker\"])::after{content:\"🔨\"; background-image:none; width:auto; height:auto; font-size:16px;}
+  .tile.row::after{content:\"\"; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-row);} 
+  .tile.row:not([style*=\"--img-row\"])::after{content:\"➡️\"; background-image:none; width:auto; height:auto; font-size:16px;}
+  .tile.col::after{content:\"\"; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-col);} 
+  .tile.col:not([style*=\"--img-col\"])::after{content:\"⬇️\"; background-image:none; width:auto; height:auto; font-size:16px;}
+  .tile.rainbow::after{content:\"\"; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-rainbow);} 
+  .tile.rainbow:not([style*=\"--img-rainbow\"])::after{content:\"🌈\"; background-image:none; width:auto; height:auto; font-size:16px;}
   .tile.rainbow{background:conic-gradient(from 0deg,#f9c,#9cf,#9fc,#fc9,#f9c);} 
 
-  /* Targeting mode */
   #board.targeting .tile{ cursor: crosshair; }
 
   #bottom{width:100%; padding:14px 16px; display:flex; align-items:center; justify-content:center; background:#e9eaed; box-shadow:0 -2px 10px var(--shadow); position:sticky; bottom:0; z-index:5;}
   #current-word{font-weight:900; letter-spacing:4px; font-size:20px; background:#fff; padding:10px 14px; border-radius:12px; box-shadow:0 2px 6px var(--shadow); min-width:200px; text-align:center;}
-  .btn{border:none;padding:12px 16px;border-radius:12px;font-weight:800;background:#fff;box-shadow:0 3px 10px var(--shadow);} 
-  .btn.primary{background:var(--blue);color:#fff;} .btn.warn{background:var(--lilac);color:#111;}
 
   #toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:9;}
 
-  /* Tutorial modal */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:20;}
   .modal[hidden]{display:none !important;}
   .modal-panel{background:#fff;border-radius:16px;max-width:420px;width:90vw;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.3);} 
@@ -122,7 +110,7 @@
 <div id="app">
   <header>
     <div class="stat">
-      <span class="pill">Moves <span id="moves">20</span></span>
+      <span class="pill"><span id="lblMoves">Moves</span> <span id="moves">20</span></span>
       <div class="goals-bar">
         <div class="goal-item"><div class="goal-swatch" style="background:#60a5fa"></div><div class="goal-num" id="goalB">20</div></div>
         <div class="goal-item"><div class="goal-swatch" style="background:#fcd34d"></div><div class="goal-num" id="goalY">20</div></div>
@@ -132,6 +120,11 @@
     <div class="debug-wrap">
       <button class="debug-badge" id="debugBtn" title="Open debug menu">DEBUG</button>
       <div class="debug-menu" id="debugMenu">
+        <div style="padding:6px 8px 2px 8px;font-weight:800;opacity:.8;">Idioma / Language</div>
+        <select id="langSelect" class="menu-item" style="box-shadow:none;border:1px solid #ddd;">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
         <button class="menu-item" id="debugToggleOverlay">Toggle overlay</button>
         <button class="menu-item" id="shuffleBtn">Shuffle</button>
         <button class="menu-item" id="endTurnBtn">End Turn</button>
@@ -139,27 +132,22 @@
     </div>
   </header>
 
-  <div id="board" aria-label="Game board">
-    <div id="tiles"></div>
-  </div>
+  <div id="board" aria-label="Game board"><div id="tiles"></div></div>
 
-  <div id="bottom">
-    <div id="current-word">____</div>
-  </div>
+  <div id="bottom"><div id="current-word">____</div></div>
 </div>
 <div id="toast"></div>
 
-<!-- Tutorial modal (dentro del <body>) -->
 <div id="tutorial" class="modal" data-backdrop hidden>
   <div class="modal-panel">
     <h3>How to play</h3>
     <ol>
-      <li>Press and drag across adjacent letters (diagonals ok) to form a word.</li>
-      <li>Release to submit. If valid, tiles are removed and colors count toward goals.</li>
-      <li>Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.</li>
-      <li>Use a booster by tapping its tile, then tap a target.</li>
+      <li id="tut1">Press and drag across adjacent letters (diagonals ok) to form a word.</li>
+      <li id="tut2">Release to submit. If valid, tiles are removed and colors count toward goals.</li>
+      <li id="tut3">Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.</li>
+      <li id="tut4">Use a booster by tapping its tile, then tap a target.</li>
     </ol>
-    <button id="closeTutorial" class="btn primary" style="margin-top:10px;">Got it</button>
+    <button id="closeTutorial" class="debug-badge" style="background:#60a5fa">Got it</button>
   </div>
 </div>
 
@@ -175,353 +163,218 @@
 
 <script>
 (function(){
-  /* === Tamaño del tablero === */
-  const COLS = 8, ROWS = 10; // 8x10
+  const COLS=8, ROWS=10;
 
-  const vowels = "AEIOU";
-  const lettersBag = [..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
+  // === Language + remote dictionaries ===
+  let currentLang = (()=>{ try{ return localStorage.getItem('lexica_lang') || 'en'; }catch(_){ return 'en'; } })();
 
-  // Colores con pesos
-  const COLOR_WEIGHTS = [
-    {key:'yellow', weight:40, color:'#fcd34d'},
-    {key:'green',  weight:30, color:'#34d399'},
-    {key:'blue',   weight:20, color:'#60a5fa'},
-    {key:'purple', weight:10, color:'#a78bfa'}
-  ];
-  function pickColor(){
-    const total = COLOR_WEIGHTS.reduce((s,o)=>s+o.weight,0);
-    let r = Math.random()*total;
-    for(const o of COLOR_WEIGHTS){ if((r-=o.weight)<=0) return {key:o.key, color:o.color}; }
-    return {key:'yellow', color:'#fcd34d'};
-  }
+  const STRINGS = {
+    en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!'},
+    es:{moves:'Movimientos',tut1:'Mantén presionado y arrastra por letras adyacentes (diagonales también) para formar una palabra.',tut2:'Suelta para enviar. Si es válida, se eliminan las fichas y sus colores cuentan al objetivo.',tut3:'Palabras de 4/5/6/7+ otorgan poderes: Rompe-bloque / Rompe-fila / Rompe-columna / Comodín.',tut4:'Usa un poder tocando su ficha y luego el objetivo.',shuffled:'Mezclado',turnEnded:'Turno finalizado',outOfMoves:'Sin movimientos',lvlUp:'Nivel superado',notValid:'Palabra inválida',powerCreated:'¡Poder creado!',objectivesDone:'¡Objetivos completos!'}
+  };
 
-  // Helpers color/contraste
-  function hexToRgb(hex){ const h=hex.replace('#',''); const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
-  function relLuminance({r,g,b}){ const s=[r,g,b].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}); return .2126*s[0]+.7152*s[1]+.0722*s[2]; }
-  function readableText(bg){ return relLuminance(hexToRgb(bg))>0.5 ? '#111' : '#fff'; }
-  function tint(hex,amt){ const {r,g,b}=hexToRgb(hex); const mix=c=>Math.min(255,Math.round(c+(255-c)*amt)); const rr=mix(r),gg=mix(g),bb=mix(b); return '#'+[rr,gg,bb].map(v=>v.toString(16).padStart(2,'0')).join(''); }
-
-  // Diccionario base + extra
-  const wordList = ["ABLE","ABOUT","ACTION","AFTER","AGAIN","ALIGN","ALIVE","ALONG","ALWAYS","APPLE","ARROW","ARRAY","AUDIO","AWARE","BALANCE","BASIC","BEACH","BEFORE","BEGIN","BELONG","BLACK","BLOCK","BLOOM","BOARD","BOOST","BRAIN","BRAVE","BREAK","BRIDGE","BRIGHT","BUILD","BURN","CABLE","CANDY","CANVAS","CHAIN","CHAIR","CHARGE","CHECK","CIRCLE","CLASS","CLEAR","CLICK","CLOCK","CLOSE","CLOUD","COACH","CODE","COIN","COLOR","COMMON","COUNT","COURT","COVER","CRACK","CRAFT","CRISP","CROSS","CROWN","CRUSH","CRYSTAL","DAILY","DANCE","DARK","DATA","DEAL","DEEP","DESIGN","DIAMOND","DIGIT","DRAGON","DREAM","DRINK","DRIVE","DROP","EARLY","EARTH","EAST","EASY","ECHO","EDIT","ELITE","EMPTY","ENERGY","ENJOY","ENTER","EQUAL","ERROR","ESCAPE","EVENT","EXACT","EXPAND","EXTRA","FACE","FAIR","FALL","FAMILY","FAST","FIELD","FIGHT","FINAL","FIND","FIRE","FIRST","FISH","FLAME","FLASH","FLAT","FLIGHT","FLOAT","FLOOR","FLOWER","FOCUS","FOLD","FOLLOW","FORCE","FOREST","FORGE","FRAME","FREE","FRESH","FRIEND","FROZEN","FRUIT","FUTURE","GAIN","GAME","GATE","GEM","GHOST","GIFT","GLOW","GOAL","GOLD","GRASS","GREAT","GREEN","GRID","GROW","GUARD","GUIDE","HABIT","HALL","HAND","HARD","HEART","HELLO","HELP","HERO","HIGH","HILL","HINT","HOLD","HOME","HONOR","HOPE","HORSE","HOUR","HOUSE","HUMAN","IDEA","IMAGE","IMPACT","INDEX","INSIDE","INSPIRE","IRON","ISLAND","ITEM","IVORY","JAZZ","JOB","JOIN","JUMP","KEEP","KEY","KIND","KING","KNIFE","KNOW","LABEL","LAKE","LAMP","LAND","LASER","LAUGH","LEAD","LEARN","LEMON","LETTER","LEVEL","LIGHT","LIKE","LINE","LINK","LION","LIST","LOCAL","LOCK","LOGIC","LONG","LOOK","LOOP","LOUD","LOVE","LUCK","LUNCH","MACHINE","MAJOR","MAKE","MAP","MARK","MARKET","MASTER","MATCH","MATH","MEAL","MEET","MEMORY","METAL","METHOD","MIDDLE","MIGHT","MIND","MODEL","MONEY","MONTH","MOON","MORNING","MOTION","MOUSE","MOVE","MOVIE","MUSIC","NAME","NATION","NEAR","NEED","NEVER","NIGHT","NORTH","NOTE","NOVEL","NURSE","OBJECT","OCEAN","OFFICE","OPEN","ORANGE","ORDER","OTHER","OUTER","OWNER","OXYGEN","PACE","PACK","PAGE","PAINT","PALACE","PAPER","PARK","PART","PARTY","PAST","PATH","PEACE","PEOPLE","PHONE","PHOTO","PIANO","PICK","PIECE","PILOT","PLACE","PLAN","PLANE","PLANT","PLATE","PLAY","POINT","POWER","PRICE","PRIDE","PRIME","PRINT","PRIZE","PROBLEM","PROCESS","PRODUCT","PROFILE","PROGRAM","PROJECT","PROOF","PUBLIC","PULL","PURE","PURPLE","QUEEN","QUICK","QUIET","QUOTE","RACE","RADAR","RAIN","RAISE","RANGE","RAPID","RARE","RATE","REACH","READ","READY","REAL","REASON","RECORD","REFRESH","REGION","RELAX","REMAIN","REMOVE","REPAIR","REPEAT","REPORT","RESCUE","RESPECT","RESULT","RETURN","REVIEW","REWARD","RICH","RIDE","RIGHT","RING","RISE","RIVER","ROAD","ROCK","ROLE","ROLL","ROOF","ROOM","ROPE","ROSE","ROUND","ROUTE","ROYAL","RULE","RUN","SAFE","SALT","SAME","SAND","SAVE","SCALE","SCAN","SCENE","SCHOOL","SCIENCE","SCORE","SCREEN","SEA","SEASON","SEAT","SEED","SEE","SEEK","SELECT","SELL","SEND","SENSE","SERIES","SERVER","SET","SEVEN","SHADOW","SHAKE","SHAPE","SHARE","SHIFT","SHINE","SHIP","SHOCK","SHOP","SHORT","SHOT","SHOW","SIDE","SIGHT","SIGN","SIMPLE","SINCE","SISTER","SKILL","SKY","SLEEP","SLIDE","SMALL","SMART","SMILE","SMOKE","SNAKE","SNOW","SOAP","SOCIAL","SOFT","SOLAR","SOLID","SONG","SOON","SOUL","SOUND","SOURCE","SOUTH","SPACE","SPEAK","SPECIAL","SPEED","SPELL","SPEND","SPIRIT","SPORT","SPOT","SPRING","SQUARE","STABLE","STAGE","STAMP","STAR","START","STATE","STATUS","STAY","STEEL","STEP","STICK","STILL","STOCK","STONE","STORY","STREAM","STREET","STRONG","STUDY","STYLE","SUMMER","SUN","SUPER","SUPPLY","SURE","SURPRISE","SURVEY","SWEET","SWIM","SWORD","SYSTEM","TABLE","TAKE","TALENT","TALK","TARGET","TEAM","TECH","TEETH","TELL","TERM","TEST","TEXT","THANK","THEME","THEORY","THERE","THING","THINK","THREE","THROW","TICKET","TIME","TITLE","TODAY","TOGETHER","TONE","TOOL","TOUCH","TOWER","TOWN","TRACK","TRADE","TRAIL","TRAIN","TRAVEL","TREAT","TREE","TREND","TRIAL","TRICK","TRIP","TROPHY","TRUCK","TRUE","TRUST","TYPE","UNDER","UNION","UNIQUE","UNKNOWN","UNTIL","UPDATE","URBAN","USER","USUAL","VALUE","VERY","VIDEO","VIEW","VILLAGE","VISION","VISIT","VOICE","VOLUME","WAIT","WALK","WALL","WANT","WARM","WASH","WASTE","WATCH","WATER","WAVE","WAY","WEAR","WEATHER","WEEK","WELCOME","WEST","WHALE","WHAT","WHEEL","WHEN","WHERE","WHITE","WHO","WHOLE","WIDE","WILD","WILL","WIND","WINDOW","WINE","WING","WINNER","WINTER","WIRE","WISE","WISH","WOMAN","WONDER","WOOD","WORD","WORK","WORLD","WORTH","WRITE","WRONG","YARD","YEAR","YELLOW","YOUNG","YOUTH","ZEBRA","ZERO","ZOO"];
-  const commonExtra = ['POOL','POOLS','BOOK','BOOKS','GAME','GAMES','WORD','WORDS','PLAY','PLAYS','PLAYER','CODE','CODES','TEST','TESTS','TIME','TIMES','WATER','LIGHT','WORLD','HELLO','HOUSE','GREEN','BLUE','YELLOW','BLACK','WHITE','STONE','FROZEN','BOMB','BOMBS','LEVEL','LEVELS','MOVE','MOVES','GOAL','GOALS','APPLE','PEAR','PEACH','LEMON','GRAPE','MANGO','BANANA','BERRY','TREE','TREES','STAR','STARS','MOON','ROOM','ROAD','POOLING'];
-  wordList.push(...commonExtra);
-  const dictionary = new Set(wordList.map(w=>w.toUpperCase()));
-  const prefixes = new Set(); for(const w of wordList){ const u=w.toUpperCase(); for(let i=1;i<=u.length;i++) prefixes.add(u.slice(0,i)); }
-
-  const boardEl = document.getElementById("board");
-  const movesEl = document.getElementById("moves");
-  const toastEl = document.getElementById("toast");
-  const debugBtn = document.getElementById("debugBtn");
-  const debugMenu = document.getElementById("debugMenu");
-  const debugToggleOverlayBtn = document.getElementById("debugToggleOverlay");
-  const shuffleBtn = document.getElementById("shuffleBtn");
-  const endTurnBtn = document.getElementById("endTurnBtn");
-  const tutorialEl = document.getElementById('tutorial');
-  const closeTutorialBtn = document.getElementById('closeTutorial');
-
-  // DEBUG menu
-  if(debugBtn){
-    debugBtn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      debugMenu.classList.toggle('show');
-    });
-    document.addEventListener('click', (e)=>{
-      if(!debugMenu.contains(e.target) && e.target!==debugBtn){
-        debugMenu.classList.remove('show');
+  const DICT_URL_EN = 'https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt';
+  const DICT_URL_ES = 'https://raw.githubusercontent.com/words/an-array-of-spanish-words/master/index.json';
+  const dictCache={en:null, es:null}, prefCache={en:null, es:null};
+  async function loadDictionary(lang){
+    if(dictCache[lang] && prefCache[lang]) return {dict:dictCache[lang], pref:prefCache[lang]};
+    try{
+      if(lang==='en'){
+        const r=await fetch(DICT_URL_EN, {mode:'cors'}); const txt=await r.text();
+        const words=txt.split(/\\r?\\n/).filter(w=>w&&w.length>=3).map(w=>w.toUpperCase());
+        const dict=new Set(words), pref=new Set(); for(const w of words){ for(let i=1;i<=w.length;i++) pref.add(w.slice(0,i)); }
+        dictCache.en=dict; prefCache.en=pref; return {dict,pref};
+      }else{
+        const r=await fetch(DICT_URL_ES, {mode:'cors'}); const arr=await r.json();
+        const words=arr.filter(w=>w&&w.length>=3).map(w=>String(w).toUpperCase());
+        const dict=new Set(words), pref=new Set(); for(const w of words){ for(let i=1;i<=w.length;i++) pref.add(w.slice(0,i)); }
+        dictCache.es=dict; prefCache.es=pref; return {dict,pref};
       }
-    });
-  }
-  if(debugToggleOverlayBtn){
-    debugToggleOverlayBtn.addEventListener('click', ()=>{
-      debugMode=!debugMode;
-      debugToggleOverlayBtn.classList.toggle('primary', debugMode);
-      refreshDebugOverlay();
-    });
-  }
-  // Tutorial robusto + cierre por fondo
-  function maybeShowTutorial(){
-    try{ if(localStorage.getItem('lexica_tutorial_shown')) return; }catch(e){}
-    tutorialEl.hidden=false;
-  }
-  if(closeTutorialBtn){ closeTutorialBtn.addEventListener('click', ()=>{ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(e){} }); }
-  if(tutorialEl && tutorialEl.hasAttribute('data-backdrop')){
-    tutorialEl.addEventListener('click', (e)=>{ if(e.target===tutorialEl){ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(_){} } });
+    }catch(e){
+      console.warn('Dictionary load failed', lang, e);
+      // Fallback to local minimal sets (built below)
+      return {dict:dictionary, pref:prefixes};
+    }
   }
 
-  let level=1, moves=20;
-  let grid=[]; let selection=[]; let selecting=false;
+  function applyLanguageToUI(){
+    const s=STRINGS[currentLang]||STRINGS.en;
+    const lm=document.getElementById('lblMoves'); if(lm) lm.textContent=s.moves;
+    const t1=document.getElementById('tut1'); if(t1) t1.textContent=s.tut1;
+    const t2=document.getElementById('tut2'); if(t2) t2.textContent=s.tut2;
+    const t3=document.getElementById('tut3'); if(t3) t3.textContent=s.tut3;
+    const t4=document.getElementById('tut4'); if(t4) t4.textContent=s.tut4;
+  }
+
+  const vowels="AEIOU";
+  const lettersBag=[..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
+
+  const COLOR_WEIGHTS=[{key:'yellow',weight:40,color:'#fcd34d'},{key:'green',weight:30,color:'#34d399'},{key:'blue',weight:20,color:'#60a5fa'},{key:'purple',weight:10,color:'#a78bfa'}];
+  function pickColor(){const total=COLOR_WEIGHTS.reduce((s,o)=>s+o.weight,0);let r=Math.random()*total;for(const o of COLOR_WEIGHTS){if((r-=o.weight)<=0) return {key:o.key,color:o.color}}return {key:'yellow',color:'#fcd34d'}}
+
+  const hexToRgb=h=>{const x=h.replace('#','');const n=parseInt(x.length===3?x.split('').map(c=>c+c).join(''):x,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255}};
+  const relL=({r,g,b})=>{const s=[r,g,b].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*s[0]+.7152*s[1]+.0722*s[2]};
+  const readable=bg=>relL(hexToRgb(bg))>0.5?'#111':'#fff';
+  const tint=(hex,amt)=>{const {r,g,b}=hexToRgb(hex);const m=c=>Math.min(255,Math.round(c+(255-c)*amt));const rr=m(r),gg=m(g),bb=m(b);return '#'+[rr,gg,bb].map(v=>v.toString(16).padStart(2,'0')).join('')};
+
+  // small local fallback dic
+  const wordList=["ABLE","ABOUT","APPLE","POOL","HOUSE","LIGHT","GREEN","BLUE","YELLOW","WORLD","STONE","FROZEN","LEVEL","MOVE","GOAL","ROOM","ROAD","WATER","PLAY","WORD","WORDS","BOOK","BOOKS"];
+  const dictionary=new Set(wordList.map(w=>w.toUpperCase()));
+  const prefixes=new Set(); for(const w of wordList){const u=w.toUpperCase(); for(let i=1;i<=u.length;i++) prefixes.add(u.slice(0,i));}
+
+  const boardEl=document.getElementById('board');
+  const tilesEl=document.getElementById('tiles');
+  const movesEl=document.getElementById('moves');
+  const toastEl=document.getElementById('toast');
+  const debugBtn=document.getElementById('debugBtn');
+  const debugMenu=document.getElementById('debugMenu');
+  const debugToggleOverlayBtn=document.getElementById('debugToggleOverlay');
+  const shuffleBtn=document.getElementById('shuffleBtn');
+  const endTurnBtn=document.getElementById('endTurnBtn');
+  const tutorialEl=document.getElementById('tutorial');
+  const closeTutorialBtn=document.getElementById('closeTutorial');
+
+  let level=1, moves=20, grid=[], selection=[], selecting=false, selectingPointerId=null;
   let hintTimer=null; const HINT_DELAY_MS=5000; let currentHint=null;
-  let debugMode=false; let targeting=null; let selectingPointerId=null; let submitting=false;
+  let debugMode=false, targeting=null, submitting=false;
 
-  function cellSizePx(){ const rect=boardEl.getBoundingClientRect(); return rect.height/ROWS; }
-  function animateDestruction(indices){ (Array.isArray(indices)?indices:Array.from(indices)).forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('explode'); }); }
-  function randLetter(){ const pick=lettersBag[Math.floor(Math.random()*lettersBag.length)]; return Math.random()<0.12?vowels[Math.floor(Math.random()*vowels.length)]:pick; }
-  function makeEmpty(){ grid=Array.from({length:ROWS*COLS},()=>null); }
-  function idx(r,c){ return r*COLS+c; } 
-  function rc(i){ return [Math.floor(i/COLS), i%COLS]; } 
-  function inBounds(r,c){ return r>=0&&c>=0&&r<ROWS&&c<COLS; }
+  tilesEl.style.setProperty('--cols',COLS);
+  tilesEl.style.setProperty('--rows',ROWS);
+  boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
 
-  function newTile(){ const col=pickColor(); return {letter:randLetter(), colorKey:col.key, color:col.color, obstacle:null, frozen:false, power:null}; }
+  const cellSizePx=()=>boardEl.getBoundingClientRect().height/ROWS;
+  const idx=(r,c)=>r*COLS+c;
+  const rc=i=>[Math.floor(i/COLS),i%COLS];
+  const inBounds=(r,c)=>r>=0&&c>=0&&r<ROWS&&c<COLS;
 
-  function sprinkleObstacles(type,count){
-    let placed=0; while(placed<count){
-      const i=Math.floor(Math.random()*grid.length), t=grid[i]; if(!t) continue;
-      if(type==="stone" && !t.obstacle && !t.frozen){ t.obstacle="stone"; t.letter=""; placed++; }
-      else if(type==="frozen" && !t.obstacle && !t.frozen){ t.frozen=true; placed++; }
-    }
-  }
-  function sprinkleBombs(count){
-    let placed=0, tries=0; while(placed<count && tries++<500){
-      const i=Math.floor(Math.random()*grid.length); const t=grid[i];
-      if(!t || t.obstacle || t.frozen) continue;
-      grid[i] = {letter:'', colorKey:null, color:null, obstacle:'bomb', state:0, frozen:false, power:null};
-      placed++;
-    }
-  }
+  const randLetter=()=>{const pick=lettersBag[Math.floor(Math.random()*lettersBag.length)];return Math.random()<0.12?vowels[Math.floor(Math.random()*vowels.length)]:pick;};
+  const newTile=()=>{const col=pickColor();return{letter:randLetter(),colorKey:col.key,color:col.color,obstacle:null,frozen:false,power:null}};
 
-  function placeInitial(){
-    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[idx(r,c)]=newTile();
-    if(level>=6) sprinkleObstacles("stone", Math.min(6, Math.floor(level/2)));
-    if(level>=12) sprinkleObstacles("frozen", Math.min(7, Math.floor(level/2)));
-    sprinkleBombs(Math.min(2, Math.floor((level+2)/6)));
-  }
+  function makeEmpty(){grid=Array.from({length:ROWS*COLS},()=>null);}
+  function placeInitial(){for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) grid[idx(r,c)]=newTile();}
 
   function render(){
-    const tilesEl=document.getElementById("tiles");
-    tilesEl.style.setProperty('--cols', COLS);
-    tilesEl.style.setProperty('--rows', ROWS);
-    boardEl.style.aspectRatio = `${COLS}/${ROWS}`;
-    tilesEl.innerHTML="";
+    tilesEl.innerHTML='';
     grid.forEach((cell,i)=>{
-      const div=document.createElement("div"); div.className="tile"; div.dataset.i=i;
-      div.style.setProperty('--ty','0px');
+      const div=document.createElement('div'); div.className='tile'; div.dataset.i=i;
       if(cell){
-        if(cell.obstacle==="stone"){ div.classList.add("obstacle-stone"); div.textContent=""; }
-        else if(cell.obstacle==="bomb"){ div.classList.add("obstacle-bomb"); const s=(cell.state||0); div.textContent= s>=2?"💥":(s>=1?"🧨🔥":"🧨"); }
+        if(cell.obstacle==='stone'){div.classList.add('obstacle-stone');}
+        else if(cell.obstacle==='bomb'){div.classList.add('obstacle-bomb'); div.textContent='🧨';}
         else{
-          div.textContent = cell.letter;
-          if(cell.color){
-            const top = tint(cell.color, 0.22);
-            div.style.background = `linear-gradient(135deg, ${top}, ${cell.color})`;
-            div.style.color = readableText(cell.color);
-          }
-          if(cell.frozen) div.classList.add("obstacle-frozen");
-          if(cell.power){
-            div.classList.add(cell.power);
-            if(cell.power === "rainbow") div.style.color = '#111';
-            const b=document.createElement("span"); b.className="badge";
-            b.textContent = cell.power==="rainbow"?"🌈":(cell.power==="breaker"?"🔨":(cell.power==="row"?"➡️":"⬇️"));
-            div.appendChild(b);
-          }
+          div.textContent=cell.letter;
+          const top=tint(cell.color,.22); div.style.background=`linear-gradient(135deg, ${top}, ${cell.color})`;
+          div.style.color=readable(cell.color);
+          if(cell.frozen) div.classList.add('obstacle-frozen');
+          if(cell.power){ div.classList.add(cell.power); const b=document.createElement('span'); b.className='badge'; b.textContent=cell.power==='rainbow'?'🌈':(cell.power==='breaker'?'🔨':(cell.power==='row'?'➡️':'⬇️')); div.appendChild(b); }
         }
-      } else { div.style.visibility="hidden"; }
+      }else div.style.visibility='hidden';
       tilesEl.appendChild(div);
     });
   }
 
-  function isAdjacent(a,b){ const [ar,ac]=rc(a),[br,bc]=rc(b); return Math.max(Math.abs(ar-br),Math.abs(ac-bc))===1; }
-  const indexFromClientPoint=(x,y)=>Number((document.elementFromPoint(x,y)?.dataset?.i) ?? -1);
+  const isAdjacent=(a,b)=>{const[ar,ac]=rc(a),[br,bc]=rc(b);return Math.max(Math.abs(ar-br),Math.abs(ac-bc))===1;}
+  const indexFromPoint=(x,y)=>Number((document.elementFromPoint(x,y)?.dataset?.i) ?? -1);
 
-  function startSelect(i){
-    clearTimeout(hintTimer); clearHint(); const t=grid[i];
-    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || submitting) return;
-    selecting=true; selection=[i]; updateSelectionClasses(); updateWordDisplay();
-  }
-  function extendTo(i){
-    if(!selecting) return; if(i<0) return; const t=grid[i]; if(!t || t.obstacle==='stone' || t.obstacle==='bomb') return;
-    const last=selection[selection.length-1]; if(i===last) return;
-    if(selection.length>=2 && i===selection[selection.length-2]){ selection.pop(); updateSelectionClasses(); updateWordDisplay(); return; }
-    const pos=selection.indexOf(i); if(pos!==-1){ selection=selection.slice(0,pos+1); updateSelectionClasses(); updateWordDisplay(); return; }
-    if(isAdjacent(last,i)){ selection.push(i); updateSelectionClasses(); updateWordDisplay(); return; }
-  }
-  function finishSelect(){
-    if(!selecting) return; selecting=false;
-    if(selection.length>1 && selection[selection.length-1]===selection[0]){ clearSelection(); scheduleHint(); return; }
-    if(selection.length<3){ clearSelection(); scheduleHint(); return; }
-    endSelect();
-  }
+  function getCurrentWord(){return selection.map(i=>grid[i]?.letter||'').join('');}
+  function updateWordDisplay(){const el=document.getElementById('current-word'); if(!el) return; const w=getCurrentWord(); el.textContent=w ? w : '____';}
+  function updateSelClasses(){document.querySelectorAll('.tile').forEach(t=>t.classList.remove('selected')); selection.forEach(i=>{const el=tilesEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('selected');}); updateWordDisplay();}
+  function clearSelection(){selection=[]; updateSelClasses();}
 
-  // Validación (local + online)
-  const onlineCache=new Map();
-  async function onlineValid(u){
-    const lc=u.toLowerCase(); if(onlineCache.has(lc)) return onlineCache.get(lc);
-    async function tryFetch(ms){
-      const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),ms);
-      try{ const r=await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lc)}`,{signal:ctl.signal}); clearTimeout(t);
-        if(r.ok){ const js=await r.json(); return Array.isArray(js)&&js.length>0; }
-        return false;
-      }catch(e){ clearTimeout(t); return false; }
-    }
-    let ok=await tryFetch(2500); if(!ok) ok=await tryFetch(1200); onlineCache.set(lc,ok); return ok;
-  }
-  async function isValidWordAsync(w){ if(!w||w.length<3) return false; const u=w.toUpperCase(); if(dictionary.has(u)) return true; return await onlineValid(u); }
+  function startSelect(i){clearTimeout(hintTimer); if(submitting) return; const t=grid[i]; if(!t || t.obstacle==='stone' || t.obstacle==='bomb') return; selecting=true; selection=[i]; updateSelClasses();}
+  function extendTo(i){if(!selecting) return; if(i<0) return; const t=grid[i]; if(!t || t.obstacle==='stone' || t.obstacle==='bomb') return; const last=selection[selection.length-1]; if(i===last) return; if(selection.length>=2 && i===selection[selection.length-2]){selection.pop(); updateSelClasses(); return;} const pos=selection.indexOf(i); if(pos!==-1){selection=selection.slice(0,pos+1); updateSelClasses(); return;} if(isAdjacent(last,i)){selection.push(i); updateSelClasses();}}
+  function finishSelect(){if(!selecting) return; selecting=false; if(selection.length>1 && selection[selection.length-1]===selection[0]){clearSelection(); scheduleHint(); return;} if(selection.length<3){clearSelection(); scheduleHint(); return;} endSelect();}
 
-  const getCurrentWord=()=>selection.map(i=>grid[i]?.letter||"").join("");
-  function drawPath(){} // sin flechas
-  function updateOrderBadges(){ document.querySelectorAll('.tile .ord').forEach(n=>n.remove()); selection.forEach((i,idx)=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(!el) return; const b=document.createElement('span'); b.className='ord'; b.textContent=(idx+1).toString(); el.appendChild(b); }); }
-  function updateSelectionClasses(){ document.querySelectorAll(".tile").forEach(t=>t.classList.remove("selected")); selection.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add("selected"); }); drawPath(); updateOrderBadges(); }
-  function updateWordDisplay(){ const el=document.getElementById('current-word'); if(el){ const w=getCurrentWord(); el.textContent = w? w : '____'; } }
-  function clearSelection(){ selection=[]; updateSelectionClasses(); updateWordDisplay(); document.querySelectorAll('.tile .ord').forEach(n=>n.remove()); }
+  async function isValidWordAsync(w){ if(!w||w.length<3) return false; const u=w.toUpperCase(); const {dict}=await loadDictionary(currentLang); return dict.has(u); }
 
-  async function endSelect(){
-    if(submitting) return; submitting=true; const word=getCurrentWord(); const valid=await isValidWordAsync(word);
-    if(valid){ resolveWord(word); } else { shakeBoard(); clearSelection(); scheduleHint(); }
-    submitting=false;
-  }
+  function toast(msg){toastEl.textContent=msg; toastEl.style.opacity=1; clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.style.opacity=0,1200);}
+  function shakeBoard(){ boardEl.animate([{transform:'translateX(0)'},{transform:'translateX(-8px)'},{transform:'translateX(8px)'},{transform:'translateX(0)'}],{duration:220}); toast(STRINGS[currentLang].notValid); }
 
-  // Objetivos por color
-  let goals = {yellow:20, green:20, blue:20};
-  const goalYEl=document.getElementById('goalY');
-  const goalGEl=document.getElementById('goalG');
-  const goalBEl=document.getElementById('goalB');
-  const updateGoalsUI=()=>{ goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; };
+  async function endSelect(){ if(submitting) return; submitting=true; const w=getCurrentWord(); const ok=await isValidWordAsync(w); if(!ok){shakeBoard(); clearSelection(); scheduleHint(); submitting=false; return;} resolveWord(w); submitting=false; }
+
+  // Goals by color
+  let goals={yellow:20, green:20, blue:20};
+  const goalYEl=document.getElementById('goalY'); const goalGEl=document.getElementById('goalG'); const goalBEl=document.getElementById('goalB');
+  const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue;};
   const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0;
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20}; updateGoalsUI(); makeEmpty(); placeInitial(); render(); refreshDebugOverlay(); toast("Level up"); }
+  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20}; updateGoalsUI(); makeEmpty(); placeInitial(); render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
-    if(len>=7) newPower="rainbow";
-    else if(len===6) newPower="col";
-    else if(len===5) newPower="row";
-    else if(len===4) newPower="breaker";
-
+    if(len>=7) newPower='rainbow'; else if(len===6) newPower='col'; else if(len===5) newPower='row'; else if(len===4) newPower='breaker';
     const toRemove=new Set(selection);
     const colorCount={yellow:0,green:0,blue:0};
-
-    // liberar frozen si se usa
-    selection.forEach(i=>{ const t=grid[i]; if(t && t.frozen){ t.frozen=false; toRemove.delete(i);} });
-
-    // armar bombas por contacto adyacente
+    selection.forEach(i=>{const t=grid[i]; if(t && t.frozen){ t.frozen=false; toRemove.delete(i); }});
     const bombsToExplode=new Set();
-    selection.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } } });
-
-    // piedras adyacentes
+    selection.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } }});
     const stonesToRemove=new Set();
-    toRemove.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(inBounds(nr,nc)){ const j=idx(nr,nc); if(grid[j] && grid[j].obstacle==="stone") stonesToRemove.add(j); } } });
-
-    // contar colores + eliminar seleccion
-    toRemove.forEach(i=>{ const t=grid[i]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[i]=null; });
+    toRemove.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(inBounds(nr,nc)){ const j=idx(nr,nc); if(grid[j] && grid[j].obstacle==='stone') stonesToRemove.add(j); } }});
+    toRemove.forEach(i=>{const t=grid[i]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[i]=null;});
     stonesToRemove.forEach(i=>grid[i]=null);
-
-    // explotar bombas (cruz)
-    bombsToExplode.forEach(bi=>{ const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{ const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null; }); });
-
-    // power-up
-    if(newPower){
-      const last=selection[selection.length-1];
-      let tIdx=last;
-      if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last;
-      if(tIdx!=null) grid[tIdx]={letter:newPower==="rainbow"?"*":randLetter(), colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower};
-      toast("Power-up created!");
-    }
-
-    // aplicar objetivos
-    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0));
-    goals.green =Math.max(0,goals.green -(colorCount.green ||0));
-    goals.blue  =Math.max(0,goals.blue  -(colorCount.blue  ||0));
-    updateGoalsUI();
-
+    bombsToExplode.forEach(bi=>{const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null;});});
+    if(newPower){ const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null) tIdx=Array.from(toRemove)[0]??last; if(tIdx!=null) grid[tIdx]={letter:newPower==='rainbow'?'*':randLetter(), colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower}; toast(STRINGS[currentLang].powerCreated); }
+    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); updateGoalsUI();
     const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay();
-
-    const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); });
-    requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); });
-
-    flashGlow(selection); clearSelection(); spendMove();
-    if(goalsComplete()){ toast("Objectives complete!"); nextLevel(); return; }
-    if(moves===0){ toast("Out of moves"); nextLevel(); }
+    const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`);}); requestAnimationFrame(()=>{Object.keys(movesMap).forEach(to=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px');});});
+    clearSelection(); spendMove();
+    if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); nextLevel(); return; }
+    if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); }
   }
 
-  function applyGravity(){
-    const moves={};
-    for(let c=0;c<COLS;c++){
-      let write=ROWS-1;
-      for(let r=ROWS-1;r>=0;r--){
-        const i=idx(r,c), cell=grid[i];
-        if(cell){
-          if(cell.obstacle==="stone"){ write=r-1; continue; }
-          if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r); }
-          write--;
-        }
-      }
-    }
-    return moves;
-  }
+  function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
   function refill(){ for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
 
-  function flashGlow(indexes){ indexes.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add("glow"); setTimeout(()=>el.classList.remove("glow"),900); } }); }
-  function shakeBoard(){ boardEl.animate([{transform:"translateX(0)"},{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"translateX(0)"}],{duration:220}); toast("Not a valid word"); }
-  function toast(msg){ toastEl.textContent=msg; toastEl.style.opacity=1; clearTimeout(toastEl._t); toastEl._t=setTimeout(()=>toastEl.style.opacity=0,1200); }
+  function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); }
+  function scheduleHint(){ clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ showAnyHint(); }, HINT_DELAY_MS); }
+  function showHintPath(path){ path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('hint'); }); }
+  async function showAnyHint(){ clearHint(); const {dict,pref}=await loadDictionary(currentLang); const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null; function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }} for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; } if(found){ currentHint=found; showHintPath(found); } }
 
-  // Boosters -> targeting
-  function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); const msg = type==='breaker'? 'Choose a tile to break' : (type==='row'? 'Choose any tile in the row' : (type==='col'? 'Choose any tile in the column' : 'Choose where to use wildcard')); toast(msg); }
+  function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
+  function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const {path}=list[n]; path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('debug'); }); } }
+  async function findAllWordsOnBoard(){ const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7; function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } } for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; } return results; }
+  async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
+
+  // Events
+  boardEl.addEventListener('pointerdown',(e)=>{const i=indexFromPoint(e.clientX,e.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const t=grid[i]; if(!selecting && t && t.power){ enterTargeting(t.power,i); return;} startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{}}});
+  boardEl.addEventListener('pointermove',(e)=>{if(!selecting) return; const i=indexFromPoint(e.clientX,e.clientY); if(i>=0) extendTo(i);});
+  boardEl.addEventListener('pointerup',()=>{if(selecting) finishSelect(); if(selectingPointerId!=null){try{boardEl.releasePointerCapture(selectingPointerId);}catch{} selectingPointerId=null;}});
+
+  // Boosters targeting (unchanged core)
+  function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); }
   function applyTargeting(target){
-    if(!targeting) return;
-    const {type,from}=targeting; const affected=new Set();
+    if(!targeting) return; const {type,from}=targeting; const affected=new Set();
     if(type==='breaker'){ affected.add(target); }
     else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){ affected.add(target); }
+    affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
+    setTimeout(()=>{ const colorCount={yellow:0,green:0,blue:0}; affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; }); if(grid[from]) grid[from].power=null; goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); updateGoalsUI(); const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay(); const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); }); requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); }); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); nextLevel(); return; } },260); targeting=null; boardEl.classList.remove('targeting'); }
 
-    animateDestruction(affected);
-    setTimeout(()=>{
-      const colorCount = {yellow:0, green:0, blue:0};
-      affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
-      if(grid[from]) grid[from].power=null;
+  // Debug menu + buttons
+  if(document.getElementById('debugBtn')){ debugBtn.addEventListener('click',(e)=>{e.stopPropagation(); debugMenu.classList.toggle('show');}); document.addEventListener('click',(e)=>{ if(!debugMenu.contains(e.target) && e.target!==debugBtn){ debugMenu.classList.remove('show'); }}); }
+  if(debugToggleOverlayBtn){ debugToggleOverlayBtn.addEventListener('click',()=>{ debugMode=!debugMode; debugToggleOverlayBtn.classList.toggle('primary',debugMode); refreshDebugOverlay(); }); }
+  if(shuffleBtn){ shuffleBtn.addEventListener('click', ()=>{ const letters=grid.map(cell=>cell && !cell.obstacle ? cell.letter : null).filter(Boolean); for(let i=letters.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [letters[i],letters[j]]=[letters[j],letters[i]]; } let k=0; grid.forEach(cell=>{ if(cell && !cell.obstacle) cell.letter=letters[k++]; }); render(); toast(STRINGS[currentLang].shuffled); scheduleHint(); refreshDebugOverlay(); }); }
+  if(endTurnBtn){ endTurnBtn.addEventListener('click', ()=>{ spendMove(); if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } else { toast(STRINGS[currentLang].turnEnded); } }); }
 
-      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0));
-      goals.green =Math.max(0,goals.green -(colorCount.green ||0));
-      goals.blue  =Math.max(0,goals.blue  -(colorCount.blue  ||0));
-      updateGoalsUI();
+  // Tutorial
+  function maybeShowTutorial(){ try{ if(localStorage.getItem('lexica_tutorial_shown')) return; }catch(e){} tutorialEl.hidden=false; }
+  if(closeTutorialBtn){ closeTutorialBtn.addEventListener('click', ()=>{ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(e){} }); }
+  if(tutorialEl && tutorialEl.hasAttribute('data-backdrop')){ tutorialEl.addEventListener('click', (e)=>{ if(e.target===tutorialEl){ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(_){} } }); }
 
-      const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay();
-      const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); });
-      requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); });
+  // Icons from repo sprites
+  function setBoosterIcons(urlBreaker, urlRow, urlCol, urlRainbow){ const root=document.documentElement; if(urlBreaker) root.style.setProperty('--img-breaker', `url(${urlBreaker})`); if(urlRow) root.style.setProperty('--img-row', `url(${urlRow})`); if(urlCol) root.style.setProperty('--img-col', `url(${urlCol})`); if(urlRainbow) root.style.setProperty('--img-rainbow', `url(${urlRainbow})`); }
 
-      if(goalsComplete()){ toast("Objectives complete!"); nextLevel(); return; }
-    },260);
-
-    targeting=null; boardEl.classList.remove('targeting');
-  }
-
-  // Eventos pointer
-  boardEl.addEventListener('pointerdown',(e)=>{ const i=indexFromClientPoint(e.clientX,e.clientY); if(i<0) return; const t=grid[i]; if(targeting){ applyTargeting(i); return;} if(!selecting && t && t.power && (t.power==='breaker'||t.power==='row'||t.power==='col'||t.power==='rainbow')){ enterTargeting(t.power,i); return;} startSelect(i); try{ boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId; }catch{} });
-  boardEl.addEventListener('pointermove',(e)=>{ if(!selecting) return; const i=indexFromClientPoint(e.clientX,e.clientY); if(i>=0) extendTo(i); });
-  boardEl.addEventListener('pointerup',(e)=>{ if(selecting) finishSelect(); if(selectingPointerId!=null){ try{ boardEl.releasePointerCapture(selectingPointerId);}catch{} selectingPointerId=null; } });
-
-  // Hint
-  function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(el=>el.classList.remove('hint')); }
-  function scheduleHint(){ clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ showAnyHint(); }, HINT_DELAY_MS); }
-  function showHintPath(path){ path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('hint'); }); }
-  function showAnyHint(){ clearHint(); const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null; function dfs(path){ if(found) return; const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!prefixes.has(word)) return; if(word.length>=3 && dictionary.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; } } for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; } if(found){ currentHint=found; showHintPath(found); } }
-
-  // Debug
-  function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
-  function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const {path}=list[n]; path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('debug'); }); } }
-  function findAllWordsOnBoard(){ const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7; function dfs(path){ const word=path.map(i=>grid[i]?.letter||'').join('').toUpperCase(); if(!prefixes.has(word)) return; if(word.length>=3 && dictionary.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } } for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb') continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; } return results; }
-  function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } const list=findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
-
-  // Botones
-  shuffleBtn.addEventListener("click", ()=>{ const letters=grid.map(cell=>cell && !cell.obstacle ? cell.letter : null).filter(Boolean); for(let i=letters.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [letters[i],letters[j]]=[letters[j],letters[i]]; } let k=0; grid.forEach(cell=>{ if(cell && !cell.obstacle) cell.letter=letters[k++]; }); render(); toast("Shuffled"); scheduleHint(); refreshDebugOverlay(); });
-  endTurnBtn.addEventListener("click", ()=>{ spendMove(); if(moves===0){ toast("Out of moves"); nextLevel(); } else { toast("Turn ended"); } });
-
-
-  // Para usar tus PNGs: setea rutas aquí (opcional)
-  function setBoosterIcons(urlBreaker, urlRow, urlCol, urlRainbow){
-    const root=document.documentElement;
-    if(urlBreaker) root.style.setProperty('--img-breaker', `url(${urlBreaker})`);
-    if(urlRow)     root.style.setProperty('--img-row',     `url(${urlRow})`);
-    if(urlCol)     root.style.setProperty('--img-col',     `url(${urlCol})`);
-    if(urlRainbow) root.style.setProperty('--img-rainbow', `url(${urlRainbow})`);
-  }
-
-  // Init
-  function init(){
+  async function init(){
     moves=20; movesEl.textContent=moves;
-    makeEmpty(); placeInitial(); render(); updateGoalsUI(); scheduleHint(); maybeShowTutorial();
-    // Ejemplo: reemplazá con rutas reales de tu repo
-    // setBoosterIcons('assets/breaker.png','assets/row.png','assets/col.png','assets/rainbow.png');
+    makeEmpty(); placeInitial(); render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
+    // load dictionaries for current language early (non-blocking for UI)
+    loadDictionary(currentLang).then(()=>{ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
+    // set sprites from your repo
+    setBoosterIcons('sprites/hammer.png','sprites/row_breaker.png','sprites/column_breaker.png','sprites/wildcard.png');
+    // set selector value + listener
+    const langSelect=document.getElementById('langSelect');
+    if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async ()=>{ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
   }
   init();
 })();
