@@ -182,6 +182,8 @@
 
   const DICT_URL_EN = 'https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt';
   const DICT_URL_ES = 'https://raw.githubusercontent.com/words/an-array-of-spanish-words/master/index.json';
+  const LOCAL_DICT_EN = 'data/english_words.txt';
+  const LOCAL_DICT_ES = 'data/spanish_words.json';
   const dictCache={en:null, es:null}, prefCache={en:null, es:null};
   var dictLoading=false;
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -202,16 +204,28 @@
     if(dictCache[lang] && prefCache[lang]) return {dict:dictCache[lang], pref:prefCache[lang]};
     dictLoading=true; toast('Loading dictionary…');
     try{
+      var opts = isIOS ? {cap:50000, maxLen:12, prefixDepth:12, batch:4000} : {cap:Infinity, maxLen:12, prefixDepth:12, batch:12000};
       if(lang==='en'){
-        const r=await fetch(DICT_URL_EN, {mode:'cors'}); const txt=await r.text();
-        var words=txt.split(/\\r?\\n/).filter(function(w){return w;});
-        var opts = isIOS ? {cap:50000, maxLen:10, prefixDepth:10, batch:4000} : {cap:Infinity, maxLen:20, prefixDepth:20, batch:12000};
+        var words;
+        try{
+          const rLocal=await fetch(LOCAL_DICT_EN, {cache:'no-store'}); const txtL=await rLocal.text();
+          words=txtL.split(/\\r?\\n/).filter(function(w){return w;});
+        }catch(_e){
+          const r=await fetch(DICT_URL_EN, {mode:'cors'}); const txt=await r.text();
+          words=txt.split(/\\r?\\n/).filter(function(w){return w;});
+        }
         const built=await buildSetsBatched(words, opts);
         dictCache.en=built.dict; prefCache.en=built.pref; dictLoading=false; toast('Dictionary ready'); return {dict:built.dict,pref:built.pref};
       }else{
-        const r=await fetch(DICT_URL_ES, {mode:'cors'}); const arr=await r.json();
-        var words=arr; var opts = isIOS ? {cap:50000, maxLen:10, prefixDepth:10, batch:4000} : {cap:Infinity, maxLen:20, prefixDepth:20, batch:12000};
-        const built=await buildSetsBatched(words, opts);
+        var wordsES;
+        try{
+          const rLocal=await fetch(LOCAL_DICT_ES, {cache:'no-store'}); const arrL=await rLocal.json();
+          wordsES=arrL;
+        }catch(_e2){
+          const r=await fetch(DICT_URL_ES, {mode:'cors'}); const arr=await r.json();
+          wordsES=arr;
+        }
+        const built=await buildSetsBatched(wordsES, opts);
         dictCache.es=built.dict; prefCache.es=built.pref; dictLoading=false; toast('Dictionary ready'); return {dict:built.dict,pref:built.pref};
       }
     }catch(e){
