@@ -173,6 +173,7 @@
 
   // === Language + remote dictionaries ===
   let currentLang = (()=>{ try{ return localStorage.getItem('lexica_lang') || 'en'; }catch(_){ return 'en'; } })();
+  var isIOS = (function(){ var ua=(navigator&&navigator.userAgent)?navigator.userAgent:''; return /iPhone|iPad|iPod/i.test(ua); })();
 
   const STRINGS = {
     en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!'},
@@ -182,22 +183,40 @@
   const DICT_URL_EN = 'https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt';
   const DICT_URL_ES = 'https://raw.githubusercontent.com/words/an-array-of-spanish-words/master/index.json';
   const dictCache={en:null, es:null}, prefCache={en:null, es:null};
+  var dictLoading=false;
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  async function buildSetsBatched(words, opts){
+    opts = opts || {}; var cap = opts.cap||Infinity, maxLen = opts.maxLen||Infinity, prefixDepth = opts.prefixDepth||Infinity, batch = opts.batch||5000;
+    var dict=new Set(), pref=new Set(); var count=0;
+    for(var i=0;i<words.length;i++){
+      var w = words[i]; if(!w) continue; w = String(w).trim(); if(w.length<3) continue; if(w.length>maxLen) continue;
+      var up = w.toUpperCase(); dict.add(up); var maxP = Math.min(up.length, prefixDepth);
+      for(var j=1;j<=maxP;j++){ pref.add(up.slice(0,j)); }
+      count++;
+      if(count>=cap) break;
+      if(i>0 && (i%batch===0)) await sleep(0);
+    }
+    return {dict, pref};
+  }
   async function loadDictionary(lang){
     if(dictCache[lang] && prefCache[lang]) return {dict:dictCache[lang], pref:prefCache[lang]};
+    dictLoading=true; toast('Loading dictionary…');
     try{
       if(lang==='en'){
         const r=await fetch(DICT_URL_EN, {mode:'cors'}); const txt=await r.text();
-        const words=txt.split(/\\r?\\n/).filter(w=>w&&w.length>=3).map(w=>w.toUpperCase());
-        const dict=new Set(words), pref=new Set(); for(const w of words){ for(let i=1;i<=w.length;i++) pref.add(w.slice(0,i)); }
-        dictCache.en=dict; prefCache.en=pref; return {dict,pref};
+        var words=txt.split(/\\r?\\n/).filter(function(w){return w;});
+        var opts = isIOS ? {cap:50000, maxLen:10, prefixDepth:10, batch:4000} : {cap:Infinity, maxLen:20, prefixDepth:20, batch:12000};
+        const built=await buildSetsBatched(words, opts);
+        dictCache.en=built.dict; prefCache.en=built.pref; dictLoading=false; toast('Dictionary ready'); return {dict:built.dict,pref:built.pref};
       }else{
         const r=await fetch(DICT_URL_ES, {mode:'cors'}); const arr=await r.json();
-        const words=arr.filter(w=>w&&w.length>=3).map(w=>String(w).toUpperCase());
-        const dict=new Set(words), pref=new Set(); for(const w of words){ for(let i=1;i<=w.length;i++) pref.add(w.slice(0,i)); }
-        dictCache.es=dict; prefCache.es=pref; return {dict,pref};
+        var words=arr; var opts = isIOS ? {cap:50000, maxLen:10, prefixDepth:10, batch:4000} : {cap:Infinity, maxLen:20, prefixDepth:20, batch:12000};
+        const built=await buildSetsBatched(words, opts);
+        dictCache.es=built.dict; prefCache.es=built.pref; dictLoading=false; toast('Dictionary ready'); return {dict:built.dict,pref:built.pref};
       }
     }catch(e){
       console.warn('Dictionary load failed', lang, e);
+      dictLoading=false; toast('Dictionary offline — fallback');
       // Fallback to local minimal sets (built below)
       return {dict:dictionary, pref:prefixes};
     }
@@ -384,25 +403,27 @@
   function refill(){ for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
 
   function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); }
-  function scheduleHint(){ clearTimeout(hintTimer); hintTimer=setTimeout(()=>{ showAnyHint(); }, HINT_DELAY_MS); }
+  function scheduleHint(){ clearTimeout(hintTimer); if(dictLoading) return; hintTimer=setTimeout(function(){ if(!dictLoading) showAnyHint(); }, HINT_DELAY_MS); }
   function showHintPath(path){ path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('hint'); }); }
   async function showAnyHint(){
+    if(dictLoading) return;
     clearHint(); const {dict,pref}=await loadDictionary(currentLang);
-    const visited=new Array(ROWS*COLS).fill(false); const maxLen=6; let found=null;
+    const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:6; let found=null;
     function dfs(path){ if(found) return; var word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }}
     for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; }
     if(found){ currentHint=found; showHintPath(found); }
   }
 
   function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
-  function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const {path}=list[n]; path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('debug'); }); } }
+  function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const p=list[n].path; for(let k=0;k<p.length;k++){ const el=boardEl.querySelector(`.tile[data-i='${p[k]}']`); if(el) el.classList.add('debug'); } } }
   async function findAllWordsOnBoard(){
-    const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=7;
-    function dfs(path){ const word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word, path:path.slice()}); if(results.length>200) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>200) return; } }
-    for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>200) break; }
+    if(dictLoading) return [];
+    const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:7; const cap=isIOS?100:200;
+    function dfs(path){ const word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word:word, path:path.slice()}); if(results.length>cap) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>cap) return; } }
+    for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>cap) break; }
     return results;
   }
-  async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
+  async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } if(dictLoading){ clearDebug(); toast('Loading dictionary…'); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
 
   // Events
   boardEl.addEventListener('pointerdown',(e)=>{const i=indexFromPoint(e.clientX,e.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const t=grid[i]; if(!selecting && t && t.power){ enterTargeting(t.power,i); return;} startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{}}});
@@ -449,12 +470,12 @@
     ensureBoardSize();
     makeEmpty(); placeInitial(); placeIceBlockers(); render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
-    loadDictionary(currentLang).then(()=>{ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
+    loadDictionary(currentLang).then(function(){ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
     // No sprites: boosters use emojis now
     window.addEventListener('resize', ()=>{ ensureBoardSize(); render(); });
     // set selector value + listener
     const langSelect=document.getElementById('langSelect');
-    if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async ()=>{ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
+    if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async function(){ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
   }
   init();
 })();
