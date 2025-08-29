@@ -204,6 +204,7 @@
   const DICT_URL_ES = 'https://raw.githubusercontent.com/words/an-array-of-spanish-words/master/index.json';
   const LOCAL_DICT_EN = 'data/english_words.txt';
   const LOCAL_DICT_ES = 'data/spanish_words.json';
+  function relUrl(p){ try{ return new URL(p, location.href).toString(); }catch(_){ return p; } }
   const dictCache={en:null, es:null}, prefCache={en:null, es:null};
   var dictLoading=false;
   function normalizeWord(lang, w){
@@ -261,7 +262,7 @@
       if(lang==='en'){
         var words;
         try{
-          const rLocal=await fetch(LOCAL_DICT_EN, {cache:'no-store'}); const txtL=await rLocal.text();
+          const rLocal=await fetch(relUrl(LOCAL_DICT_EN), {cache:'no-store'}); const txtL=await rLocal.text();
           words=txtL.split(/\\r?\\n/).filter(function(w){return w;});
         }catch(_e){
           const r=await fetch(DICT_URL_EN, {mode:'cors'}); const txt=await r.text();
@@ -272,7 +273,7 @@
       }else{
         var wordsES;
         try{
-          const rLocal=await fetch(LOCAL_DICT_ES, {cache:'no-store'}); const arrL=await rLocal.json();
+          const rLocal=await fetch(relUrl(LOCAL_DICT_ES), {cache:'no-store'}); const arrL=await rLocal.json();
           wordsES=arrL;
         }catch(_e2){
           const r=await fetch(DICT_URL_ES, {mode:'cors'}); const arr=await r.json();
@@ -621,7 +622,7 @@
   // Level loader (from level_data)
   function colorFromKey(key){ if(key==='yellow') return '#fcd34d'; if(key==='green') return '#34d399'; if(key==='blue') return '#60a5fa'; if(key==='purple') return '#a78bfa'; if(key==='booster') return '#a87657'; return '#fcd34d'; }
   async function loadLevelFromData(lvl, loopIfMissing){
-    const path=`level_data/level_${lvl}.json`;
+    const path=relUrl(`level_data/level_${lvl}.json`);
     try{
       if(IS_FILE){
         console.warn('file:// detected — trying embedded level_'+lvl);
