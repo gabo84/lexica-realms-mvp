@@ -711,12 +711,16 @@
     tilesEl.style.setProperty('--cols',COLS);
     tilesEl.style.setProperty('--rows',ROWS);
     ensureBoardSize();
-    // Objectives
-    goals={yellow: (data.objectives&&data.objectives.yellow)||0,
-           green: (data.objectives&&data.objectives.green)||0,
-           blue:  (data.objectives&&data.objectives.blue)||0,
-           ice:   (data.objectives&&data.objectives.ice)||0,
-           fire:  (data.objectives&&data.objectives.fire)||0};
+    // Objectives (include red and purple if present)
+    goals={
+      yellow: (data.objectives&&data.objectives.yellow)||0,
+      green:  (data.objectives&&data.objectives.green)||0,
+      blue:   (data.objectives&&data.objectives.blue)||0,
+      purple: (data.objectives&&data.objectives.purple)||0,
+      red:    (data.objectives&&data.objectives.red)||0,
+      ice:    (data.objectives&&data.objectives.ice)||0,
+      fire:   (data.objectives&&data.objectives.fire)||0
+    };
     updateGoalsUI();
     // Weights
     if(data.letterWeights) setLetterWeights(data.letterWeights);
