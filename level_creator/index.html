@@ -52,7 +52,7 @@
       <label>Language <select id="lang"><option value="en">EN</option><option value="es">ES</option></select></label>
       <button id="btnAutoTest">Auto‑test</button>
       <button id="btnImport">Import</button>
-      <button id="btnExport" class="primary">Export JSON</button>
+      <button id="btnExport" class="primary">Save As</button>
     </div>
   </header>
 
@@ -177,7 +177,21 @@
     function validPerc(obj){ const s=sumPercent(obj); return Math.abs(s-100)<=0.01; }
     function pickWeighted(map){ const total=sumPercent(map); let r=Math.random()*total; for(const [k,v] of Object.entries(map)){ r-=Number(v||0); if(r<=0) return k; } return Object.keys(map)[0]; }
     function fillEmptyByWeights(){ if(!validPerc(weights)){ toast('Letters % must sum 100'); return; } if(!validPerc(colorWeights)){ toast('Colors % must sum 100'); return; } for(let i=0;i<grid.length;i++){ if(!grid[i]){ const letter=pickWeighted(weights); const color=pickWeighted(colorWeights); grid[i]={type:'letter',letter,color}; } } draw(); saveAutosave(); }
-    function exportJSON(){ if(!validPerc(weights)){ toast('Letters % must sum 100'); return; } if(!validPerc(colorWeights)){ toast('Colors % must sum 100'); return; } const objectives={ red:Number(objRed.value||0), blue:Number(objBlue.value||0), yellow:Number(objYellow.value||0), green:Number(objGreen.value||0), purple:Number(objPurple.value||0), ice:Number(objIce.value||0), fire:Number(objFire.value||0) }; const payload={ cols:COLS, rows:ROWS, grid:new Array(ROWS*COLS).fill(null).map((_,i)=>grid[i]||null), objectives, letterWeights:weights, colorWeights:colorWeights }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`level_${COLS}x${ROWS}.json`; a.click(); URL.revokeObjectURL(a.href); }
+    async function exportJSON(){
+      if(!validPerc(weights)){ toast('Letters % must sum 100'); return; }
+      if(!validPerc(colorWeights)){ toast('Colors % must sum 100'); return; }
+      const objectives={ red:Number(objRed.value||0), blue:Number(objBlue.value||0), yellow:Number(objYellow.value||0), green:Number(objGreen.value||0), purple:Number(objPurple.value||0), ice:Number(objIce.value||0), fire:Number(objFire.value||0) };
+      const payload={ cols:COLS, rows:ROWS, grid:new Array(ROWS*COLS).fill(null).map((_,i)=>grid[i]||null), objectives, letterWeights:weights, colorWeights:colorWeights };
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const filename=`level_${COLS}x${ROWS}.json`;
+      if(window.showSaveFilePicker){
+        try{
+          const handle=await window.showSaveFilePicker({ suggestedName: filename, types:[{description:'Level JSON', accept:{'application/json':['.json']}}] });
+          const writable=await handle.createWritable(); await writable.write(blob); await writable.close(); toast('Saved'); return;
+        }catch(e){ console.warn('Save As failed, falling back to download', e); }
+      }
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); toast('Downloaded');
+    }
     document.getElementById('btnExport').addEventListener('click',exportJSON);
     document.getElementById('btnImport').addEventListener('click',()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=async()=>{ const file=inp.files[0]; if(!file) return; try{ const txt=await file.text(); const data=JSON.parse(txt); COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS; grid=data.grid||grid; weights=data.letterWeights||weights; objYellow.value=(data.objectives&&data.objectives.yellow)||0; objGreen.value=(data.objectives&&data.objectives.green)||0; objBlue.value=(data.objectives&&data.objectives.blue)||0; objIce.value=(data.objectives&&data.objectives.ice)||0; objFire.value=(data.objectives&&data.objectives.fire)||0; renderWeights(); ensureSize(); draw(); saveAutosave(); toast('Level imported'); }catch(e){ toast('Import failed'); console.warn(e); } }; inp.click(); });
 
