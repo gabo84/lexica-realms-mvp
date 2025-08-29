@@ -170,9 +170,25 @@
   </ul>
 </footer>
 
+<!-- Optional embedded assets for file:// debugging. Paste your JSON/word lists here. -->
+<script type="application/json" id="embedded_level_1">{ 
+  "cols": 8, "rows": 10,
+  "objectives": {"yellow":20,"green":20,"blue":20,"ice":0,"fire":0},
+  "grid": []
+}</script>
+<script type="application/json" id="embedded_level_2">{ 
+  "cols": 8, "rows": 10,
+  "objectives": {"yellow":18,"green":18,"blue":18,"ice":0,"fire":0},
+  "grid": []
+}</script>
+<!-- For English, paste newline-separated words inside this tag for file:// tests. -->
+<script type="text/plain" id="embedded_dict_en"></script>
+<!-- For Spanish, paste a JSON array of words inside this tag for file:// tests. -->
+<script type="application/json" id="embedded_dict_es">[]</script>
+
 <script>
 (function(){
-  const COLS=8, ROWS=10;
+  let COLS=8, ROWS=10;
 
   // === Language + remote dictionaries ===
   let currentLang = (()=>{ try{ return localStorage.getItem('lexica_lang') || 'en'; }catch(_){ return 'en'; } })();
@@ -222,9 +238,24 @@
     dictLoading=true; toast((STRINGS[currentLang]||STRINGS.en).dictLoading);
     try{
       if(IS_FILE){
-        console.warn('Running from file:// — skipping remote/local fetch for dictionaries. Using fallback.');
-        dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictFallback + ' (file mode)');
-        return {dict:dictionary, pref:prefixes};
+        console.warn('file:// detected — trying embedded dictionaries');
+        let words=null;
+        if(lang==='en'){
+          const el=document.getElementById('embedded_dict_en');
+          if(el){ const txt=el.textContent||''; words=txt.split(/\r?\n/).filter(Boolean); }
+        }else{
+          const el=document.getElementById('embedded_dict_es');
+          if(el){ try{ words=JSON.parse(el.textContent||'[]'); }catch(_e){} }
+        }
+        if(words && words.length){
+          var opts = {cap:50000, maxLen:12, prefixDepth:12, batch:4000};
+          const built=await buildSetsBatched(words, opts);
+          dictCache[lang]=built.dict; prefCache[lang]=built.pref; dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictReady);
+          return {dict:built.dict, pref:built.pref};
+        } else {
+          dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictFallback + ' (file mode)');
+          return {dict:dictionary, pref:prefixes};
+        }
       }
       var opts = isIOS ? {cap:50000, maxLen:12, prefixDepth:12, batch:4000} : {cap:Infinity, maxLen:12, prefixDepth:12, batch:12000};
       if(lang==='en'){
@@ -592,39 +623,50 @@
   async function loadLevelFromData(lvl, loopIfMissing){
     const path=`level_data/level_${lvl}.json`;
     try{
-      if(IS_FILE){ console.warn('Running from file:// — cannot fetch level JSON. Using procedural board.'); return false; }
+      if(IS_FILE){
+        console.warn('file:// detected — trying embedded level_'+lvl);
+        const el=document.getElementById('embedded_level_'+lvl);
+        if(!el) return false;
+        const data=JSON.parse(el.textContent||'{}');
+        return applyLevelData(data);
+      }
       const r=await fetch(path,{cache:'no-store'});
       if(!r.ok){ if(loopIfMissing) return false; else return false; }
       const data=await r.json();
-      // Size
-      COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS;
-      tilesEl.style.setProperty('--cols',COLS);
-      tilesEl.style.setProperty('--rows',ROWS);
-      boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
-      // Objectives
-      goals={yellow: (data.objectives&&data.objectives.yellow)||0,
-             green: (data.objectives&&data.objectives.green)||0,
-             blue:  (data.objectives&&data.objectives.blue)||0,
-             ice:   (data.objectives&&data.objectives.ice)||0,
-             fire:  (data.objectives&&data.objectives.fire)||0};
-      updateGoalsUI();
-      // Weights
-      if(data.letterWeights) setLetterWeights(data.letterWeights);
-      // Grid
-      grid=Array.from({length:ROWS*COLS},(_,i)=>{
-        const cell=data.grid && data.grid[i]; if(!cell) return null;
-        if(cell.type==='letter'){
-          const colorKey=cell.color||'yellow'; return {letter:String(cell.letter||'').toUpperCase(), colorKey, color:colorFromKey(colorKey), obstacle:null, frozen:false, power:null};
-        } else if(cell.type==='ice'){
-          return {letter:null,colorKey:null,color:'#b6e0ff',obstacle:'ice',layers:Math.max(1,Number(cell.layers)||1),frozen:false,power:null};
-        } else if(cell.type==='stone'){
-          return {letter:null,colorKey:null,color:'#bfc4cc',obstacle:'stone',frozen:false,power:null};
-        } else if(cell.type==='fire'){
-          return {letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:Number(cell.stage)||1,frozen:false,power:null};
-        } else return null;
-      });
-      return true;
+      return applyLevelData(data);
     }catch(e){ console.warn('loadLevelFromData failed', e); return false; }
+  }
+  function applyLevelData(data){
+    // Size
+    COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS;
+    tilesEl.style.setProperty('--cols',COLS);
+    tilesEl.style.setProperty('--rows',ROWS);
+    boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
+    // Objectives
+    goals={yellow: (data.objectives&&data.objectives.yellow)||0,
+           green: (data.objectives&&data.objectives.green)||0,
+           blue:  (data.objectives&&data.objectives.blue)||0,
+           ice:   (data.objectives&&data.objectives.ice)||0,
+           fire:  (data.objectives&&data.objectives.fire)||0};
+    updateGoalsUI();
+    // Weights
+    if(data.letterWeights) setLetterWeights(data.letterWeights);
+    // Grid
+    grid=Array.from({length:ROWS*COLS},(_,i)=>{
+      const cell=data.grid && data.grid[i]; if(!cell) return null;
+      if(cell.type==='letter'){
+        const colorKey=cell.color||'yellow'; return {letter:String(cell.letter||'').toUpperCase(), colorKey, color:colorFromKey(colorKey), obstacle:null, frozen:false, power:null};
+      } else if(cell.type==='ice'){
+        return {letter:null,colorKey:null,color:'#b6e0ff',obstacle:'ice',layers:Math.max(1,Number(cell.layers)||1),frozen:false,power:null};
+      } else if(cell.type==='stone'){
+        return {letter:null,colorKey:null,color:'#bfc4cc',obstacle:'stone',frozen:false,power:null};
+      } else if(cell.type==='fire'){
+        return {letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:Number(cell.stage)||1,frozen:false,power:null};
+      } else return null;
+    });
+    // Fill empty with letters
+    for(let i=0;i<grid.length;i++){ if(grid[i]==null) grid[i]=newTile(); }
+    return true;
   }
 
   // Icons from repo sprites
