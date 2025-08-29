@@ -149,9 +149,10 @@
     ensureSize();
 
     function draw(){ gridEl.innerHTML=''; grid.forEach((cell,i)=>{ const d=document.createElement('div'); d.className='cell'; d.dataset.i=i; d.addEventListener('contextmenu',ev=>ev.preventDefault()); if(cell && cell.type==='letter'){ d.classList.add('letter'); let bg='linear-gradient(135deg,#e5e7eb,#cbd5e1)'; if(cell.color==='random') bg='linear-gradient(135deg,#e5e7eb,#cbd5e1)'; else if(cell.color==='red') bg='linear-gradient(135deg,#fda4af,#ef4444)'; else if(cell.color==='blue') bg='linear-gradient(135deg,#93c5fd,#60a5fa)'; else if(cell.color==='yellow') bg='linear-gradient(135deg,#fde68a,#fcd34d)'; else if(cell.color==='green') bg='linear-gradient(135deg,#6ee7b7,#34d399)'; else if(cell.color==='purple') bg='linear-gradient(135deg,#e9d5ff,#a78bfa)'; d.style.background=bg; const letterDisplay=(cell.letter && cell.letter.length)? cell.letter.toUpperCase() : '%'; d.textContent=letterDisplay; }
-      else if(cell.type==='ice'){ d.style.background='linear-gradient(135deg,#c9f2ff,#b6e0ff)'; const s=document.createElement('div'); s.className='over'; s.textContent='🧊×'+(cell.layers||1); d.appendChild(s); }
-      else if(cell.type==='stone'){ d.style.background='#bfc4cc'; const s=document.createElement('div'); s.className='over'; s.textContent='🪨'; d.appendChild(s); }
-      else if(cell.type==='fire'){ d.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const s=document.createElement('div'); s.className='over'; s.textContent= cell.stage===1?'🧨':(cell.stage===2?'🔥':'🔥+'); d.appendChild(s); }
+      else if(cell && cell.type==='ice'){ d.style.background='linear-gradient(135deg,#c9f2ff,#b6e0ff)'; const s=document.createElement('div'); s.className='over'; s.textContent='🧊×'+(cell.layers||1); d.appendChild(s); }
+      else if(cell && cell.type==='stone'){ d.style.background='#bfc4cc'; const s=document.createElement('div'); s.className='over'; s.textContent='🪨'; d.appendChild(s); }
+      else if(cell && cell.type==='fire'){ d.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const s=document.createElement('div'); s.className='over'; s.textContent= cell.stage===1?'🧨':(cell.stage===2?'🔥':'🔥+'); d.appendChild(s); }
+      else { d.style.background='transparent'; d.style.boxShadow='none'; d.style.outline='2px dashed #cbd5e1'; }
       gridEl.appendChild(d); }); }
     draw();
 
