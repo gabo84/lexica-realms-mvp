@@ -102,12 +102,21 @@
       </div>
 
       <div class="group">
-        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Letter weights % (sum 100)</strong> <button id="btnResetWeights">Reset</button></div>
-        <div id="weightsLetters" class="weights letters"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Letter weights %</strong> <button id="btnResetWeights">Reset</button></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+          <div style="min-width:210px;flex:1 1 240px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><strong>Vowels</strong><span class="note">Sum: <span id="sumVowels">0</span>%</span></div>
+            <div id="weightsLettersV" class="weights letters"></div>
+          </div>
+          <div style="min-width:210px;flex:1 1 240px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><strong>Consonants</strong><span class="note">Sum: <span id="sumCons">0</span>%</span></div>
+            <div id="weightsLettersC" class="weights letters"></div>
+          </div>
+        </div>
       </div>
 
       <div class="group">
-        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Color weights % (sum 100)</strong> <button id="btnResetColorWeights">Reset</button></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Color weights %</strong> <span class="note">Sum: <span id="sumColors">0</span>%</span> <button id="btnResetColorWeights">Reset</button></div>
         <div class="weights colors" id="colorWeights"></div>
         <div class="note">Colors used for random fills: red, blue, yellow, green, violet (purple)</div>
         <div class="row"><button id="btnFillEmpty">Fill empty cells (by weights)</button></div>
@@ -127,20 +136,37 @@
     let mouseDown=false, currentTool='letter';
 
     const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const vowelSet=new Set(['A','E','I','O','U']);
     const defaultWeights={E:12,A:9,O:8,S:6,I:6,N:6,L:5,R:5,U:5,D:4,T:4,C:4,P:3,M:3,Y:2,B:2,G:2,H:2,V:2,J:1,K:1,Q:1,W:1,X:1,Z:1,F:2};
    
     // normalize defaultWeights to %
     function normalizeCountsToPercent(obj){ const s=Object.values(obj).reduce((a,b)=>a+b,0)||1; const out={}; let acc=0, keys=Object.keys(obj); keys.forEach((k,i)=>{ let p = (obj[k]*100)/s; if(i<keys.length-1) { p = Math.round(p*10)/10; acc+=p; out[k]=p; } else { out[k]=Math.max(0, Math.round((100-acc)*10)/10); } }); return out; }
-    let weights=normalizeCountsToPercent(defaultWeights); // letter %
-    const weightsEl=document.getElementById('weightsLetters');
-    function renderWeights(){ weightsEl.innerHTML=''; letters.forEach(ch=>{ const w=document.createElement('div'); w.className='w'; const val=(weights[ch]||0); w.innerHTML=`<span style="width:16px;display:inline-block">${ch}</span><input type="number" step="0.1" min="0" value="${val}" style="width:70px">%`; w.querySelector('input').addEventListener('input',e=>{ weights[ch]=Number(e.target.value||0); saveAutosave(); }); weightsEl.appendChild(w); }); }
+let weights=normalizeCountsToPercent(defaultWeights); // letter %
+    const weightsElV=document.getElementById('weightsLettersV');
+    const weightsElC=document.getElementById('weightsLettersC');
+    const sumVowelsEl=document.getElementById('sumVowels');
+    const sumConsEl=document.getElementById('sumCons');
+    function updateLetterSums(){
+      const vSum=letters.filter(ch=>vowelSet.has(ch)).reduce((s,ch)=>s+Number(weights[ch]||0),0);
+      const cSum=letters.filter(ch=>!vowelSet.has(ch)).reduce((s,ch)=>s+Number(weights[ch]||0),0);
+      if(sumVowelsEl) sumVowelsEl.textContent=(Math.round(vSum*10)/10).toString();
+      if(sumConsEl) sumConsEl.textContent=(Math.round(cSum*10)/10).toString();
+    }
+    function renderWeights(){
+      weightsElV.innerHTML='';
+      weightsElC.innerHTML='';
+      letters.forEach(ch=>{ const w=document.createElement('div'); w.className='w'; const val=(weights[ch]||0); w.innerHTML=`<span style="width:16px;display:inline-block">${ch}</span><input type="number" step="0.1" min="0" value="${val}" style="width:70px">%`; w.querySelector('input').addEventListener('input',e=>{ weights[ch]=Number(e.target.value||0); updateLetterSums(); saveAutosave(); }); (vowelSet.has(ch)?weightsElV:weightsElC).appendChild(w); });
+      updateLetterSums();
+    }
     renderWeights();
 
     // color weights %
     const colorKeys=['red','blue','yellow','green','purple'];
     let colorWeights={ red:10, blue:20, yellow:30, green:30, purple:10 };
     const colorWeightsEl=document.getElementById('colorWeights');
-    function renderColorWeights(){ colorWeightsEl.innerHTML=''; colorKeys.forEach(k=>{ const d=document.createElement('div'); d.className='w'; const v=colorWeights[k]||0; d.innerHTML=`<span style="width:48px;display:inline-block;text-transform:capitalize">${k}</span><input type="number" step="0.1" min="0" value="${v}" style="width:70px">%`; d.querySelector('input').addEventListener('input',e=>{ colorWeights[k]=Number(e.target.value||0); saveAutosave(); }); colorWeightsEl.appendChild(d); }); }
+    const sumColorsEl=document.getElementById('sumColors');
+    function updateColorSum(){ const s=Object.values(colorWeights).reduce((a,b)=>a+Number(b||0),0); if(sumColorsEl) sumColorsEl.textContent=(Math.round(s*10)/10).toString(); }
+    function renderColorWeights(){ colorWeightsEl.innerHTML=''; colorKeys.forEach(k=>{ const d=document.createElement('div'); d.className='w'; const v=colorWeights[k]||0; d.innerHTML=`<span style="width:48px;display:inline-block;text-transform:capitalize">${k}</span><input type="number" step="0.1" min="0" value="${v}" style="width:70px">%`; d.querySelector('input').addEventListener('input',e=>{ colorWeights[k]=Number(e.target.value||0); updateColorSum(); saveAutosave(); }); colorWeightsEl.appendChild(d); }); updateColorSum(); }
     renderColorWeights();
 
     // Grid helpers
