@@ -132,6 +132,7 @@
         <button class="menu-item" id="debugToggleOverlay">Toggle overlay</button>
         <button class="menu-item" id="shuffleBtn">Shuffle</button>
         <button class="menu-item" id="endTurnBtn">End Turn</button>
+        <button class="menu-item" id="winNowBtn">Win Level</button>
       </div>
     </div>
   </header>
@@ -646,6 +647,8 @@
   });
   if(shuffleBtn){ shuffleBtn.addEventListener('click', ()=>{ const letters=grid.map(cell=>cell && !cell.obstacle ? cell.letter : null).filter(Boolean); for(let i=letters.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [letters[i],letters[j]]=[letters[j],letters[i]]; } let k=0; grid.forEach(cell=>{ if(cell && !cell.obstacle) cell.letter=letters[k++]; }); render(); toast(STRINGS[currentLang].shuffled); scheduleHint(); refreshDebugOverlay(); }); }
   if(endTurnBtn){ endTurnBtn.addEventListener('click', ()=>{ spendMove(); if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } else { toast(STRINGS[currentLang].turnEnded); } }); }
+  const winNowBtn=document.getElementById('winNowBtn');
+  if(winNowBtn){ winNowBtn.addEventListener('click', ()=>{ Object.keys(goals).forEach(k=>goals[k]=0); updateGoalsUI(); toast(STRINGS[currentLang].objectivesDone); spawnConfetti(); nextLevel(); }); }
   
 
   // Tutorial
