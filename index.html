@@ -374,7 +374,8 @@
   function headerHeight(){ const h=document.querySelector('header'); return h? h.getBoundingClientRect().height : 0; }
   function ensureBoardSize(){
     // Try to fit board between header and footer; scale down CELL_PX if needed
-    const availH = window.innerHeight - headerHeight() - footerHeight() - 16; // margin
+    const fudge = 32; // extra breathing room for margins/shadows
+    const availH = window.innerHeight - headerHeight() - footerHeight() - fudge;
     const neededH = PAD_PX*2 + ROWS*CELL_PX + (ROWS-1)*GAP_PX;
     if(availH < neededH){
       const cell = Math.max(36, Math.floor((availH - PAD_PX*2 - (ROWS-1)*GAP_PX) / ROWS));
@@ -777,11 +778,13 @@
   async function init(){
     moves=20; movesEl.textContent=moves;
     ensureBoardSize();
+    inventory={breaker:5,row:5,col:5,rainbow:5}; updateInventoryUI();
     makeEmpty(); const ok=await loadLevelFromData(1,false); if(!ok){ setProceduralGoals(60); placeInitial(); } render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
     loadDictionary(currentLang).then(function(){ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
     // No sprites: boosters use emojis now
     window.addEventListener('resize', ()=>{ ensureBoardSize(); render(); });
+    setTimeout(()=>{ ensureBoardSize(); render(); }, 0);
     // set selector value + listener
     const langSelect=document.getElementById('langSelect');
     if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async function(){ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
