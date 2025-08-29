@@ -184,10 +184,10 @@
     }
   ],
   "objectives": {
-    "red": 0,
-    "blue": 10,
-    "yellow": 20,
-    "green": 15,
+    "red": 5,
+    "blue": 5,
+    "yellow": 5,
+    "green": 0,
     "purple": 0,
     "ice": 0,
     "fire": 0
