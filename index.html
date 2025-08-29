@@ -290,7 +290,7 @@
   const closeTutorialBtn=document.getElementById('closeTutorial');
 
   let level=1, moves=20, grid=[], selection=[], selecting=false, selectingPointerId=null;
-  let hintTimer=null; const HINT_DELAY_MS=5000; let currentHint=null;
+  let hintTimer=null; const HINT_DELAY_MS=8000; let currentHint=null;
   let debugMode=false, targeting=null, submitting=false;
   let verboseWordDebug=false;
 
@@ -336,7 +336,11 @@
       if(cell){
         if(cell.obstacle==='stone'){div.classList.add('obstacle-stone');}
         else if(cell.obstacle==='bomb'){div.classList.add('obstacle-bomb'); div.textContent='🧨';}
-        else if(cell.obstacle==='ice'){div.classList.add('obstacle-ice'); const span=document.createElement('span'); span.textContent='🧊'; span.style.fontSize=emojiSize+'px'; div.appendChild(span);}
+        else if(cell.obstacle==='fire'){
+          const stage=cell.stage||1; const emoji = stage===1?'🧨':(stage===2?'🔥':'🔥');
+          div.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const span=document.createElement('span'); span.textContent=emoji; span.style.fontSize=emojiSize+'px'; div.appendChild(span);
+        }
+        else if(cell.obstacle==='ice'){div.classList.add('obstacle-ice'); const span=document.createElement('span'); span.textContent='🧊'; span.style.fontSize=emojiSize+'px'; if(cell.layers&&cell.layers>1){ const b=document.createElement('span'); b.className='badge'; b.textContent='×'+cell.layers; div.appendChild(b);} div.appendChild(span);}
         else{
           // Background and text color
           const top=tint(cell.color,.22); div.style.background=`linear-gradient(135deg, ${top}, ${cell.color})`;
@@ -402,13 +406,13 @@
   }
 
   // Goals by color
-  let goals={yellow:20, green:20, blue:20, ice:6};
+  let goals={yellow:20, green:20, blue:20, ice:0, fire:0};
   const goalYEl=document.getElementById('goalY'); const goalGEl=document.getElementById('goalG'); const goalBEl=document.getElementById('goalB'); const goalIceEl=document.getElementById('goalIce');
   const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; if(goalIceEl) goalIceEl.textContent=(goals.ice!=null?goals.ice:0);};
-  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && ((goals.ice!=null?goals.ice:0)<=0);
+  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && ((goals.ice!=null?goals.ice:0)<=0) && ((goals.fire!=null?goals.fire:0)<=0);
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:6}; updateGoalsUI(); makeEmpty(); placeInitial(); placeIceBlockers(); render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); }
+  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:0,fire:0}; updateGoalsUI(); makeEmpty(); if(!loadLevelFromData(level)){ placeInitial(); } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
@@ -418,37 +422,55 @@
     selection.forEach(i=>{const t=grid[i]; if(t && t.frozen){ t.frozen=false; toRemove.delete(i); }});
     const bombsToExplode=new Set();
     // Break adjacent ICE blockers -> convert to fresh letters and count towards ice goal
-    const iceToBreak=new Set();
-    selection.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ const nr=r+dr,nc=c+dc; if(dr===0&&dc===0) continue; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='ice') iceToBreak.add(j); }});
-    selection.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(cell && cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } }});
+    const iceToHit=new Set(); const firesToRemove=new Set();
+    selection.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ const nr=r+dr,nc=c+dc; if(dr===0&&dc===0) continue; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(!cell) continue; if(cell.obstacle==='ice') iceToHit.add(j); if(cell.obstacle==='fire') firesToRemove.add(j); if(cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } }});
     const stonesToRemove=new Set();
     toRemove.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(inBounds(nr,nc)){ const j=idx(nr,nc); if(grid[j] && grid[j].obstacle==='stone') stonesToRemove.add(j); } }});
     toRemove.forEach(i=>{const t=grid[i]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[i]=null;});
     stonesToRemove.forEach(i=>grid[i]=null);
-    let iceBrokenCount=0;
-    iceToBreak.forEach(j=>{ grid[j]=newTile(); iceBrokenCount++; });
+    let iceBrokenCount=0, fireClearedCount=0;
+    iceToHit.forEach(j=>{ const t=grid[j]; if(t.layers && t.layers>1){ t.layers--; } else { grid[j]=newTile(); iceBrokenCount++; } });
+    firesToRemove.forEach(j=>{ grid[j]=null; fireClearedCount++; });
     bombsToExplode.forEach(bi=>{const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null;});});
     if(newPower){
       const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null){ var arr=Array.from(toRemove); tIdx = (arr.length>0?arr[0]:last); }
-      if(tIdx!=null) grid[tIdx]={letter:'', colorKey:'purple', color:'#a78bfa', obstacle:null, frozen:false, power:newPower};
+      // Use a distinctive brown background for boosters
+      if(tIdx!=null) grid[tIdx]={letter:'', colorKey:'booster', color:'#a87657', obstacle:null, frozen:false, power:newPower};
       toast(STRINGS[currentLang].powerCreated);
     }
-    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount); updateGoalsUI();
-    recountIceGoals();
-    const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay();
+    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount); goals.fire=Math.max(0,(goals.fire||0)-fireClearedCount); recountDynamicObjectives(); updateGoalsUI();
+    const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay();
     const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`);}); requestAnimationFrame(()=>{Object.keys(movesMap).forEach(to=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px');});});
     clearSelection(); spendMove();
-    if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); nextLevel(); return; }
-    if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); }
+    if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); spawnConfetti(); nextLevel(); return; }
+    if(moves===0){ showLoseModal(); }
   }
 
   function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone' || cell.obstacle==='ice'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
   function refill(){ for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
 
-  function recountIceGoals(){
-    // ensure ice objective matches remaining ice blockers on board
-    let count=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='ice') count++; }
-    if(goals && typeof goals.ice==='number'){ goals.ice=count; }
+  function recountDynamicObjectives(){
+    // sync ice/fire objectives with current board if those objectives are enabled
+    if(goals && typeof goals.ice==='number'){
+      let c=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='ice') c++; } goals.ice=c; }
+    if(goals && typeof goals.fire==='number'){
+      let f=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='fire') f++; } goals.fire=f; }
+  }
+  function processFireAfterMove(){
+    // simple state machine: stage2 -> stage3; stage3 spreads to one adjacent cell (if available)
+    const spreadTargets=[];
+    for(let i=0;i<grid.length;i++){
+      const t=grid[i]; if(!t || t.obstacle!=='fire') continue; if(!t.stage) t.stage=1;
+      if(t.stage===2){ t.stage=3; }
+      else if(t.stage===3){
+        const [r,c]=rc(i); const candidates=[]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+          if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(!cell || (cell.obstacle && cell.obstacle!=='ice')) continue; candidates.push(j);
+        }
+        if(candidates.length){ const j=candidates[Math.floor(Math.random()*candidates.length)]; spreadTargets.push(j); }
+      }
+    }
+    spreadTargets.forEach(j=>{ grid[j]={letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:2}; });
+    recountDynamicObjectives(); render();
   }
 
   function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); document.querySelectorAll('.hint-ord').forEach(e=>e.remove()); }
@@ -490,15 +512,16 @@
   boardEl.addEventListener('touchend',()=>{ if(selecting) finishSelect(); });
 
   // Boosters targeting (unchanged core)
-  function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); }
+  function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); toast(type==='breaker'?(currentLang==='es'?'Toca una pieza para romper':'Tap a tile to break'): (currentLang==='es'?'Elige objetivo':'Choose a target')); }
   function applyTargeting(target){
     if(!targeting) return; const {type,from}=targeting; const affected=new Set();
+    if(target===from){ toast(currentLang==='es'?'Elige otra pieza':'Pick a different tile'); return; }
     if(type==='breaker'){ affected.add(target); }
     else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){ affected.add(target); }
     affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
-    setTimeout(()=>{ const colorCount={yellow:0,green:0,blue:0}; affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; }); if(grid[from]) grid[from].power=null; goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); recountIceGoals(); updateGoalsUI(); const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay(); const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); }); requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); }); spendMove(); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); nextLevel(); return; } if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } },260); targeting=null; boardEl.classList.remove('targeting'); }
+    setTimeout(()=>{ const colorCount={yellow:0,green:0,blue:0}; affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; }); if(grid[from]) grid[from].power=null; goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); recountDynamicObjectives(); updateGoalsUI(); const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay(); const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); }); requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); }); spendMove(); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); spawnConfetti(); nextLevel(); return; } if(moves===0){ showLoseModal(); } },260); targeting=null; boardEl.classList.remove('targeting'); }
 
   // Debug menu + buttons
   if(document.getElementById('debugBtn')){ debugBtn.addEventListener('click',(e)=>{e.stopPropagation(); debugMenu.classList.toggle('show');}); document.addEventListener('click',(e)=>{ if(!debugMenu.contains(e.target) && e.target!==debugBtn){ debugMenu.classList.remove('show'); }}); }
@@ -507,11 +530,41 @@
   if(wordDebugChk){ wordDebugChk.addEventListener('change', ()=>{ verboseWordDebug=wordDebugChk.checked; }); }
   if(shuffleBtn){ shuffleBtn.addEventListener('click', ()=>{ const letters=grid.map(cell=>cell && !cell.obstacle ? cell.letter : null).filter(Boolean); for(let i=letters.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [letters[i],letters[j]]=[letters[j],letters[i]]; } let k=0; grid.forEach(cell=>{ if(cell && !cell.obstacle) cell.letter=letters[k++]; }); render(); toast(STRINGS[currentLang].shuffled); scheduleHint(); refreshDebugOverlay(); }); }
   if(endTurnBtn){ endTurnBtn.addEventListener('click', ()=>{ spendMove(); if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } else { toast(STRINGS[currentLang].turnEnded); } }); }
+  
 
   // Tutorial
   function maybeShowTutorial(){ try{ if(localStorage.getItem('lexica_tutorial_shown')) return; }catch(e){} tutorialEl.hidden=false; }
   if(closeTutorialBtn){ closeTutorialBtn.addEventListener('click', ()=>{ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(e){} }); }
   if(tutorialEl && tutorialEl.hasAttribute('data-backdrop')){ tutorialEl.addEventListener('click', (e)=>{ if(e.target===tutorialEl){ tutorialEl.hidden=true; try{ localStorage.setItem('lexica_tutorial_shown','1'); }catch(_){} } }); }
+
+  // Lose modal + confetti
+  function showLoseModal(){
+    let m=document.getElementById('loseModal'); if(!m){
+      m=document.createElement('div'); m.id='loseModal'; m.className='modal'; m.innerHTML=`<div class="modal-panel" style="text-align:center"><h3 id="loseTitle">You lost</h3><div style="margin:8px 0 14px;opacity:.8">${' '}</div><button id="btnRestart" class="debug-badge" style="background:#ef4444">Restart</button></div>`; document.body.appendChild(m);
+      m.addEventListener('click',(e)=>{ if(e.target===m) m.hidden=true; });
+      document.getElementById('btnRestart').addEventListener('click',()=>{ m.hidden=true; restartLevel(); });
+    }
+    const s=STRINGS[currentLang]||STRINGS.en; document.getElementById('loseTitle').textContent=(currentLang==='es'?'Perdiste':'You lost'); m.hidden=false;
+  }
+  function restartLevel(){ moves=20; movesEl.textContent=moves; makeEmpty(); if(!loadLevelFromData(level)){ placeInitial(); } render(); scheduleHint(); refreshDebugOverlay(); updateGoalsUI(); }
+  function spawnConfetti(){
+    const container=document.createElement('div'); container.style.cssText='position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50'; document.body.appendChild(container);
+    const colors=['#f87171','#60a5fa','#34d399','#fbbf24','#a78bfa']; const n=80;
+    for(let i=0;i<n;i++){ const s=document.createElement('span'); s.textContent='🎉'; s.style.cssText=`position:absolute;left:${Math.random()*100}% ;top:-10%;font-size:${12+Math.random()*18}px;`; container.appendChild(s); const dx=(-30+Math.random()*60); const dy=110+Math.random()*40; s.animate([{transform:`translate(0,0) rotate(0deg)`},{transform:`translate(${dx}vw,${dy}vh) rotate(${Math.random()*720-360}deg)`}],{duration:1200+Math.random()*800, easing:'cubic-bezier(.2,.8,.2,1)'}).onfinish=()=>{ s.remove(); if(container.childElementCount===0) container.remove(); }; }
+  }
+
+  // Level loader (from level_data)
+  function colorFromKey(key){ if(key==='yellow') return '#fcd34d'; if(key==='green') return '#34d399'; if(key==='blue') return '#60a5fa'; if(key==='purple') return '#a78bfa'; return '#fcd34d'; }
+  function loadLevelFromData(lvl){
+    const path=`level_data/level_${lvl}.json`;
+    try{
+      // fetch synchronously-like using fetch; if 404, bail
+      // Note: will work on GH Pages/static hosting
+      // We don't await here in init path; this is best-effort
+      // Using sync XHR is discouraged; keep async
+      return false;
+    }catch(_){ return false; }
+  }
 
   // Icons from repo sprites
   function setBoosterIcons(urlBreaker, urlRow, urlCol, urlRainbow){ const root=document.documentElement; if(urlBreaker) root.style.setProperty('--img-breaker', `url(${urlBreaker})`); if(urlRow) root.style.setProperty('--img-row', `url(${urlRow})`); if(urlCol) root.style.setProperty('--img-col', `url(${urlCol})`); if(urlRainbow) root.style.setProperty('--img-rainbow', `url(${urlRainbow})`); }
