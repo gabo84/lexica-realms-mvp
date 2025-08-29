@@ -133,10 +133,15 @@
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="wordDebugChk" /> Verbose word debug
         </label>
+        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
+          Hint delay (s)
+          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="8" style="margin-left:auto;width:84px;">
+        </label>
         <button class="menu-item" id="debugToggleOverlay">Toggle overlay</button>
         <button class="menu-item" id="shuffleBtn">Shuffle</button>
         <button class="menu-item" id="endTurnBtn">End Turn</button>
         <button class="menu-item" id="winNowBtn">Win Level</button>
+        <button class="menu-item" id="loseNowBtn">Lose Now</button>
       </div>
     </div>
   </header>
@@ -360,7 +365,7 @@
   const closeTutorialBtn=document.getElementById('closeTutorial');
 
   let level=1, moves=20, grid=[], selection=[], selecting=false, selectingPointerId=null;
-  let hintTimer=null; const HINT_DELAY_MS=8000; let currentHint=null;
+  let hintTimer=null; let HINT_DELAY_MS=8000; let currentHint=null;
   let debugMode=false, targeting=null, submitting=false;
   let verboseWordDebug=false;
   let inventory={breaker:5,row:5,col:5,rainbow:5};
@@ -681,6 +686,25 @@
   if(endTurnBtn){ endTurnBtn.addEventListener('click', ()=>{ spendMove(); if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } else { toast(STRINGS[currentLang].turnEnded); } }); }
   const winNowBtn=document.getElementById('winNowBtn');
   if(winNowBtn){ winNowBtn.addEventListener('click', ()=>{ Object.keys(goals).forEach(k=>goals[k]=0); updateGoalsUI(); toast(STRINGS[currentLang].objectivesDone); spawnConfetti(); nextLevel(); }); }
+
+  // Lose-now button
+  const loseNowBtn=document.getElementById('loseNowBtn');
+  if(loseNowBtn){ loseNowBtn.addEventListener('click', ()=>{ showLoseModal(); }); }
+
+  // Hint delay input (seconds)
+  const hintDelayInput=document.getElementById('hintDelayInput');
+  if(hintDelayInput){
+    // initialize with current value in seconds
+    hintDelayInput.value = Math.max(2, Math.round(HINT_DELAY_MS/1000));
+    hintDelayInput.addEventListener('change', ()=>{
+      const v = Number(hintDelayInput.value);
+      if(!isNaN(v) && v>=2 && v<=60){
+        HINT_DELAY_MS = Math.round(v*1000);
+        toast((currentLang==='es'?'Hint en ':'Hint in ') + v + 's');
+        scheduleHint();
+      }
+    });
+  }
   
 
   // Tutorial
