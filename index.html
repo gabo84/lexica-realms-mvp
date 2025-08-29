@@ -177,6 +177,7 @@
   // === Language + remote dictionaries ===
   let currentLang = (()=>{ try{ return localStorage.getItem('lexica_lang') || 'en'; }catch(_){ return 'en'; } })();
   var isIOS = (function(){ var ua=(navigator&&navigator.userAgent)?navigator.userAgent:''; return /iPhone|iPad|iPod/i.test(ua); })();
+  var IS_FILE = (function(){ try{ return location && location.protocol === 'file:'; }catch(_){ return false; } })();
 
   const STRINGS = {
     en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!',dictLoading:'Loading dictionary…',dictReady:'Dictionary ready',dictFallback:'Dictionary offline — fallback'},
@@ -220,6 +221,11 @@
     if(dictCache[lang] && prefCache[lang]) return {dict:dictCache[lang], pref:prefCache[lang]};
     dictLoading=true; toast((STRINGS[currentLang]||STRINGS.en).dictLoading);
     try{
+      if(IS_FILE){
+        console.warn('Running from file:// — skipping remote/local fetch for dictionaries. Using fallback.');
+        dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictFallback + ' (file mode)');
+        return {dict:dictionary, pref:prefixes};
+      }
       var opts = isIOS ? {cap:50000, maxLen:12, prefixDepth:12, batch:4000} : {cap:Infinity, maxLen:12, prefixDepth:12, batch:12000};
       if(lang==='en'){
         var words;
@@ -262,7 +268,12 @@
   }
 
   const vowels="AEIOU";
-  const lettersBag=[..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
+  let lettersBag=[..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
+  function setLetterWeights(weights){
+    if(!weights){ return; }
+    const seq=[]; Object.keys(weights).forEach(k=>{ const n=Math.max(0, Math.floor(weights[k]||0)); for(let i=0;i<n;i++) seq.push(k.toUpperCase()); });
+    if(seq.length>=5) lettersBag=seq; // basic sanity: ensure not empty
+  }
 
   const COLOR_WEIGHTS=[{key:'yellow',weight:40,color:'#fcd34d'},{key:'green',weight:30,color:'#34d399'},{key:'blue',weight:20,color:'#60a5fa'},{key:'purple',weight:10,color:'#a78bfa'}];
   function pickColor(){const total=COLOR_WEIGHTS.reduce((s,o)=>s+o.weight,0);let r=Math.random()*total;for(const o of COLOR_WEIGHTS){if((r-=o.weight)<=0) return {key:o.key,color:o.color}}return {key:'yellow',color:'#fcd34d'}}
@@ -412,7 +423,7 @@
   const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && ((goals.ice!=null?goals.ice:0)<=0) && ((goals.fire!=null?goals.fire:0)<=0);
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:0,fire:0}; updateGoalsUI(); makeEmpty(); if(!loadLevelFromData(level)){ placeInitial(); } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
+  async function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:0,fire:0}; updateGoalsUI(); makeEmpty(); const ok=await loadLevelFromData(level,true); if(!ok){ await loadLevelFromData(1,false); level=1; } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
@@ -497,22 +508,46 @@
   async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } if(dictLoading){ clearDebug(); toast('Loading dictionary…'); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
 
   // Events
-  boardEl.addEventListener('pointerdown',(e)=>{const i=indexFromPoint(e.clientX,e.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const t=grid[i]; if(!selecting && t && t.power){ enterTargeting(t.power,i); return;} startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{}}});
+  boardEl.addEventListener('pointerdown',(e)=>{const i=indexFromPoint(e.clientX,e.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const t=grid[i]; if(!selecting && t && t.power){ if(t.power==='row' || t.power==='col'){ useSelfPower(i); return;} enterTargeting(t.power,i); return;} startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{}}});
   boardEl.addEventListener('pointermove',(e)=>{if(!selecting) return; const i=indexFromPoint(e.clientX,e.clientY); if(i>=0) extendTo(i);});
   boardEl.addEventListener('pointerup',()=>{if(selecting) finishSelect(); if(selectingPointerId!=null){try{boardEl.releasePointerCapture(selectingPointerId);}catch{} selectingPointerId=null;}});
 
   // Touch fallback (iOS Safari)
   boardEl.addEventListener('touchstart',(e)=>{
     if(!e.touches || e.touches.length===0) return; const t=e.touches[0]; e.preventDefault();
-    const i=indexFromPoint(t.clientX,t.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const cell=grid[i]; if(!selecting && cell && cell.power){ enterTargeting(cell.power,i); return;} startSelect(i); }
+    const i=indexFromPoint(t.clientX,t.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const cell=grid[i]; if(!selecting && cell && cell.power){ if(cell.power==='row' || cell.power==='col'){ useSelfPower(i); return;} enterTargeting(cell.power,i); return;} startSelect(i); }
   }, {passive:false});
   boardEl.addEventListener('touchmove',(e)=>{
     if(!e.touches || e.touches.length===0) return; const t=e.touches[0]; e.preventDefault(); if(!selecting) return; const i=indexFromPoint(t.clientX,t.clientY); if(i>=0) extendTo(i);
   }, {passive:false});
   boardEl.addEventListener('touchend',()=>{ if(selecting) finishSelect(); });
 
-  // Boosters targeting (unchanged core)
+  // Boosters
   function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); toast(type==='breaker'?(currentLang==='es'?'Toca una pieza para romper':'Tap a tile to break'): (currentLang==='es'?'Elige objetivo':'Choose a target')); }
+
+  function explodeAffected(affected, from){
+    affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
+    setTimeout(()=>{
+      const colorCount={yellow:0,green:0,blue:0};
+      affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
+      if(grid[from]) grid[from].power=null;
+      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0));
+      recountDynamicObjectives(); updateGoalsUI();
+      const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay();
+      const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); });
+      requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); });
+      spendMove(); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); spawnConfetti(); nextLevel(); return; } if(moves===0){ showLoseModal(); }
+    },260);
+  }
+
+  function useSelfPower(from){
+    const t=grid[from]; if(!t || !t.power) return;
+    const affected=new Set();
+    if(t.power==='row'){ const [r]=rc(from); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
+    else if(t.power==='col'){ const [,c]=rc(from); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
+    else return; // only row/col here
+    explodeAffected(affected, from);
+  }
   function applyTargeting(target){
     if(!targeting) return; const {type,from}=targeting; const affected=new Set();
     if(target===from){ toast(currentLang==='es'?'Elige otra pieza':'Pick a different tile'); return; }
@@ -520,8 +555,7 @@
     else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){ affected.add(target); }
-    affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
-    setTimeout(()=>{ const colorCount={yellow:0,green:0,blue:0}; affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; }); if(grid[from]) grid[from].power=null; goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); recountDynamicObjectives(); updateGoalsUI(); const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay(); const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); }); requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); }); spendMove(); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); spawnConfetti(); nextLevel(); return; } if(moves===0){ showLoseModal(); } },260); targeting=null; boardEl.classList.remove('targeting'); }
+    explodeAffected(affected, from); targeting=null; boardEl.classList.remove('targeting'); }
 
   // Debug menu + buttons
   if(document.getElementById('debugBtn')){ debugBtn.addEventListener('click',(e)=>{e.stopPropagation(); debugMenu.classList.toggle('show');}); document.addEventListener('click',(e)=>{ if(!debugMenu.contains(e.target) && e.target!==debugBtn){ debugMenu.classList.remove('show'); }}); }
@@ -554,16 +588,43 @@
   }
 
   // Level loader (from level_data)
-  function colorFromKey(key){ if(key==='yellow') return '#fcd34d'; if(key==='green') return '#34d399'; if(key==='blue') return '#60a5fa'; if(key==='purple') return '#a78bfa'; return '#fcd34d'; }
-  function loadLevelFromData(lvl){
+  function colorFromKey(key){ if(key==='yellow') return '#fcd34d'; if(key==='green') return '#34d399'; if(key==='blue') return '#60a5fa'; if(key==='purple') return '#a78bfa'; if(key==='booster') return '#a87657'; return '#fcd34d'; }
+  async function loadLevelFromData(lvl, loopIfMissing){
     const path=`level_data/level_${lvl}.json`;
     try{
-      // fetch synchronously-like using fetch; if 404, bail
-      // Note: will work on GH Pages/static hosting
-      // We don't await here in init path; this is best-effort
-      // Using sync XHR is discouraged; keep async
-      return false;
-    }catch(_){ return false; }
+      if(IS_FILE){ console.warn('Running from file:// — cannot fetch level JSON. Using procedural board.'); return false; }
+      const r=await fetch(path,{cache:'no-store'});
+      if(!r.ok){ if(loopIfMissing) return false; else return false; }
+      const data=await r.json();
+      // Size
+      COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS;
+      tilesEl.style.setProperty('--cols',COLS);
+      tilesEl.style.setProperty('--rows',ROWS);
+      boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
+      // Objectives
+      goals={yellow: (data.objectives&&data.objectives.yellow)||0,
+             green: (data.objectives&&data.objectives.green)||0,
+             blue:  (data.objectives&&data.objectives.blue)||0,
+             ice:   (data.objectives&&data.objectives.ice)||0,
+             fire:  (data.objectives&&data.objectives.fire)||0};
+      updateGoalsUI();
+      // Weights
+      if(data.letterWeights) setLetterWeights(data.letterWeights);
+      // Grid
+      grid=Array.from({length:ROWS*COLS},(_,i)=>{
+        const cell=data.grid && data.grid[i]; if(!cell) return null;
+        if(cell.type==='letter'){
+          const colorKey=cell.color||'yellow'; return {letter:String(cell.letter||'').toUpperCase(), colorKey, color:colorFromKey(colorKey), obstacle:null, frozen:false, power:null};
+        } else if(cell.type==='ice'){
+          return {letter:null,colorKey:null,color:'#b6e0ff',obstacle:'ice',layers:Math.max(1,Number(cell.layers)||1),frozen:false,power:null};
+        } else if(cell.type==='stone'){
+          return {letter:null,colorKey:null,color:'#bfc4cc',obstacle:'stone',frozen:false,power:null};
+        } else if(cell.type==='fire'){
+          return {letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:Number(cell.stage)||1,frozen:false,power:null};
+        } else return null;
+      });
+      return true;
+    }catch(e){ console.warn('loadLevelFromData failed', e); return false; }
   }
 
   // Icons from repo sprites
@@ -572,7 +633,7 @@
   async function init(){
     moves=20; movesEl.textContent=moves;
     ensureBoardSize();
-    makeEmpty(); placeInitial(); placeIceBlockers(); render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
+    makeEmpty(); const ok=await loadLevelFromData(1,false); if(!ok){ placeInitial(); } render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
     loadDictionary(currentLang).then(function(){ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
     // No sprites: boosters use emojis now
