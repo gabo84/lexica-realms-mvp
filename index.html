@@ -212,8 +212,10 @@
   var IS_FILE = (function(){ try{ return location && location.protocol === 'file:'; }catch(_){ return false; } })();
 
   const STRINGS = {
-    en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!',dictLoading:'Loading dictionary…',dictReady:'Dictionary ready',dictFallback:'Dictionary offline — fallback'},
-    es:{moves:'Movimientos',tut1:'Mantén presionado y arrastra por letras adyacentes (diagonales también) para formar una palabra.',tut2:'Suelta para enviar. Si es válida, se eliminan las fichas y sus colores cuentan al objetivo.',tut3:'Palabras de 4/5/6/7+ otorgan poderes: Rompe-bloque / Rompe-fila / Rompe-columna / Comodín.',tut4:'Usa un poder tocando su ficha y luego el objetivo.',shuffled:'Mezclado',turnEnded:'Turno finalizado',outOfMoves:'Sin movimientos',lvlUp:'Nivel superado',notValid:'Palabra inválida',powerCreated:'¡Poder creado!',objectivesDone:'¡Objetivos completos!',dictLoading:'Cargando diccionario…',dictReady:'Diccionario listo',dictFallback:'Diccionario offline — fallback'}
+    en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!',dictLoading:'Loading dictionary…',dictReady:'Dictionary ready',dictFallback:'Dictionary offline — fallback',
+      lostTitle:'You lost', plus5:'+5 Moves', loseBtn:'Lose' },
+    es:{moves:'Movimientos',tut1:'Mantén presionado y arrastra por letras adyacentes (diagonales también) para formar una palabra.',tut2:'Suelta para enviar. Si es válida, se eliminan las fichas y sus colores cuentan al objetivo.',tut3:'Palabras de 4/5/6/7+ otorgan poderes: Rompe-bloque / Rompe-fila / Rompe-columna / Comodín.',tut4:'Usa un poder tocando su ficha y luego el objetivo.',shuffled:'Mezclado',turnEnded:'Turno finalizado',outOfMoves:'Sin movimientos',lvlUp:'Nivel superado',notValid:'Palabra inválida',powerCreated:'¡Poder creado!',objectivesDone:'¡Objetivos completos!',dictLoading:'Cargando diccionario…',dictReady:'Diccionario listo',dictFallback:'Diccionario offline — fallback',
+      lostTitle:'Perdiste', plus5:'+5 movimientos', loseBtn:'Perder' }
   };
 
   const DICT_URL_EN = 'https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt';
@@ -688,12 +690,45 @@
 
   // Lose modal + confetti
   function showLoseModal(){
-    let m=document.getElementById('loseModal'); if(!m){
-      m=document.createElement('div'); m.id='loseModal'; m.className='modal'; m.innerHTML=`<div class="modal-panel" style="text-align:center"><h3 id="loseTitle">You lost</h3><div style="margin:8px 0 14px;opacity:.8">${' '}</div><button id="btnRestart" class="debug-badge" style="background:#ef4444">Restart</button></div>`; document.body.appendChild(m);
-      m.addEventListener('click',(e)=>{ if(e.target===m) m.hidden=true; });
-      document.getElementById('btnRestart').addEventListener('click',()=>{ m.hidden=true; restartLevel(); });
+    const s = STRINGS[currentLang] || STRINGS.en;
+    let m = document.getElementById('loseModal');
+    if(!m){
+      m = document.createElement('div');
+      m.id = 'loseModal';
+      m.className = 'modal';
+      // Large panel almost full screen
+      m.innerHTML = `
+        <div class="modal-panel" style="width:92vw;max-width:520px;min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:22px 18px;">
+          <h3 id="loseTitle" style="font-size:40px;margin:6px 0 0 0;font-weight:900;letter-spacing:1px;"></h3>
+          <div style="font-size:96px;line-height:1">😩</div>
+          <div style="display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px;margin-top:6px;">
+            <button id="btnPlus5" class="debug-badge" style="background:#60a5fa;font-size:24px;padding:12px 14px;border-radius:12px;width:100%"></button>
+            <button id="btnLose" class="debug-badge" style="background:#ef4444;font-size:24px;padding:12px 14px;border-radius:12px;width:100%"></button>
+          </div>
+        </div>`;
+      document.body.appendChild(m);
+      // backdrop click closes modal (optional)
+      m.addEventListener('click', (e)=>{ if(e.target===m) m.hidden=true; });
+      // wire buttons
+      m.addEventListener('click', (e)=>{
+        if(e.target && e.target.id==='btnPlus5'){
+          m.hidden = true;
+          moves = (moves||0) + 5;
+          movesEl.textContent = moves;
+          toast('+'+5+' ' + (currentLang==='es'?'movimientos':'moves'));
+          scheduleHint();
+          refreshDebugOverlay();
+        } else if(e.target && e.target.id==='btnLose'){
+          m.hidden = true;
+          restartLevel();
+        }
+      });
     }
-    const s=STRINGS[currentLang]||STRINGS.en; document.getElementById('loseTitle').textContent=(currentLang==='es'?'Perdiste':'You lost'); m.hidden=false;
+    // Localize texts every time the modal opens
+    const title = m.querySelector('#loseTitle'); if(title) title.textContent = s.lostTitle;
+    const b5 = m.querySelector('#btnPlus5'); if(b5) b5.textContent = s.plus5;
+    const bl = m.querySelector('#btnLose'); if(bl) bl.textContent = s.loseBtn;
+    m.hidden = false;
   }
   function restartLevel(){ moves=20; movesEl.textContent=moves; makeEmpty(); if(!loadLevelFromData(level)){ placeInitial(); } render(); scheduleHint(); refreshDebugOverlay(); updateGoalsUI(); }
   function spawnConfetti(){
