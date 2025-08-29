@@ -137,6 +137,21 @@
   </header>
 
   <div id="board" aria-label="Game board"><div id="tiles"></div></div>
+  
+  <div id="inventory" style="display:flex;gap:12px;justify-content:space-around;align-items:center;margin:6px 12px 8px 12px;">
+    <button class="inv-btn" data-type="breaker" title="Block breaker" style="width:56px;height:56px;border-radius:10px;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;">
+      <span>🎯</span><small class="inv-count" id="inv_breaker">5</small>
+    </button>
+    <button class="inv-btn" data-type="col" title="Column breaker" style="width:56px;height:56px;border-radius:10px;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;">
+      <span style="display:inline-block;">⬆️</span><small class="inv-count" id="inv_col">5</small>
+    </button>
+    <button class="inv-btn" data-type="row" title="Row breaker" style="width:56px;height:56px;border-radius:10px;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;">
+      <span>🥊</span><small class="inv-count" id="inv_row">5</small>
+    </button>
+    <button class="inv-btn" data-type="rainbow" title="Wildcard" style="width:56px;height:56px;border-radius:10px;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;">
+      <span>🃏</span><small class="inv-count" id="inv_rainbow">5</small>
+    </button>
+  </div>
 
   <div id="bottom"><div id="current-word">____</div></div>
 </div>
@@ -343,6 +358,7 @@
   let hintTimer=null; const HINT_DELAY_MS=8000; let currentHint=null;
   let debugMode=false, targeting=null, submitting=false;
   let verboseWordDebug=false;
+  let inventory={breaker:5,row:5,col:5,rainbow:5};
 
   tilesEl.style.setProperty('--cols',COLS);
   tilesEl.style.setProperty('--rows',ROWS);
@@ -411,6 +427,7 @@
 
   function getCurrentWord(){ return selection.map(function(i){ return (grid[i] && grid[i].letter) || ''; }).join(''); }
   function updateWordDisplay(){const el=document.getElementById('current-word'); if(!el) return; const w=getCurrentWord(); el.textContent=w ? w : '____';}
+  function updateInventoryUI(){ const map={breaker:'inv_breaker',row:'inv_row',col:'inv_col',rainbow:'inv_rainbow'}; Object.keys(map).forEach(k=>{ const el=document.getElementById(map[k]); if(el) el.textContent=inventory[k]||0; }); }
   function updateSelClasses(){
     document.querySelectorAll('.tile').forEach(t=>{ t.classList.remove('selected'); const o=t.querySelector('.ord'); if(o) o.remove(); });
     selection.forEach((i,ord)=>{ const el=tilesEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('selected'); const s=document.createElement('span'); s.className='ord'; s.textContent=String(ord+1); el.appendChild(s);} });
@@ -476,7 +493,7 @@
   }
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  async function nextLevel(){ level++; moves=20; movesEl.textContent=moves; makeEmpty(); let ok=await loadLevelFromData(level,true); if(!ok){ ok=await loadLevelFromData(1,false); if(!ok){ setProceduralGoals(60); placeInitial(); level=1; } } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
+  async function nextLevel(){ level++; moves=20; movesEl.textContent=moves; inventory={breaker:5,row:5,col:5,rainbow:5}; updateInventoryUI(); makeEmpty(); let ok=await loadLevelFromData(level,true); if(!ok){ ok=await loadLevelFromData(1,false); if(!ok){ setProceduralGoals(60); placeInitial(); level=1; } } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
@@ -602,19 +619,31 @@
     explodeAffected(affected, from);
   }
   function applyTargeting(target){
-    if(!targeting) return; const {type,from}=targeting; const affected=new Set();
-    if(target===from){ toast(currentLang==='es'?'Elige otra pieza':'Pick a different tile'); return; }
+    if(!targeting) return; const {type,from,source}=targeting; const affected=new Set();
+    if(from!=null && target===from){ toast(currentLang==='es'?'Elige otra pieza':'Pick a different tile'); return; }
     if(type==='breaker'){ affected.add(target); }
     else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){ affected.add(target); }
-    explodeAffected(affected, from); targeting=null; boardEl.classList.remove('targeting'); }
+    explodeAffected(affected, from); if(source==='inventory'){ if(inventory[type]>0){ inventory[type]--; updateInventoryUI(); } } targeting=null; boardEl.classList.remove('targeting'); }
 
   // Debug menu + buttons
   if(document.getElementById('debugBtn')){ debugBtn.addEventListener('click',(e)=>{e.stopPropagation(); debugMenu.classList.toggle('show');}); document.addEventListener('click',(e)=>{ if(!debugMenu.contains(e.target) && e.target!==debugBtn){ debugMenu.classList.remove('show'); }}); }
   if(debugToggleOverlayBtn){ debugToggleOverlayBtn.addEventListener('click',()=>{ debugMode=!debugMode; debugToggleOverlayBtn.classList.toggle('primary',debugMode); refreshDebugOverlay(); }); }
   const wordDebugChk=document.getElementById('wordDebugChk');
   if(wordDebugChk){ wordDebugChk.addEventListener('change', ()=>{ verboseWordDebug=wordDebugChk.checked; }); }
+  // Inventory buttons
+  document.querySelectorAll('#inventory .inv-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const type=btn.getAttribute('data-type'); if(!type) return; if((inventory[type]||0)<=0){ toast('No uses left'); return; }
+      targeting={type, from:null, source:'inventory'}; boardEl.classList.add('targeting');
+      const msg = type==='breaker' ? (currentLang==='es'?'Toca una pieza para romper':'Tap a tile to break')
+        : type==='row' ? (currentLang==='es'?'Toca una fila':'Tap a row')
+        : type==='col' ? (currentLang==='es'?'Toca una columna':'Tap a column')
+        : (currentLang==='es'?'Toca una pieza':'Tap a tile');
+      toast(msg);
+    });
+  });
   if(shuffleBtn){ shuffleBtn.addEventListener('click', ()=>{ const letters=grid.map(cell=>cell && !cell.obstacle ? cell.letter : null).filter(Boolean); for(let i=letters.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [letters[i],letters[j]]=[letters[j],letters[i]]; } let k=0; grid.forEach(cell=>{ if(cell && !cell.obstacle) cell.letter=letters[k++]; }); render(); toast(STRINGS[currentLang].shuffled); scheduleHint(); refreshDebugOverlay(); }); }
   if(endTurnBtn){ endTurnBtn.addEventListener('click', ()=>{ spendMove(); if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } else { toast(STRINGS[currentLang].turnEnded); } }); }
   
