@@ -500,7 +500,7 @@
     const len=selection.length; let newPower=null;
     if(len>=7) newPower='rainbow'; else if(len===6) newPower='col'; else if(len===5) newPower='row'; else if(len===4) newPower='breaker';
     const toRemove=new Set(selection);
-    const colorCount={yellow:0,green:0,blue:0};
+    const colorCount={yellow:0,green:0,blue:0,purple:0,red:0};
     selection.forEach(i=>{const t=grid[i]; if(t && t.frozen){ t.frozen=false; toRemove.delete(i); }});
     const bombsToExplode=new Set();
     // Break adjacent ICE blockers -> convert to fresh letters and count towards ice goal
@@ -520,7 +520,14 @@
       if(tIdx!=null) grid[tIdx]={letter:'', colorKey:'booster', color:'#a87657', obstacle:null, frozen:false, power:newPower};
       toast(STRINGS[currentLang].powerCreated);
     }
-    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount); goals.fire=Math.max(0,(goals.fire||0)-fireClearedCount); recountDynamicObjectives(); updateGoalsUI();
+    goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0));
+    goals.green=Math.max(0,goals.green-(colorCount.green||0));
+    goals.blue=Math.max(0,goals.blue-(colorCount.blue||0));
+    goals.purple=Math.max(0,(goals.purple||0)-(colorCount.purple||0));
+    goals.red=Math.max(0,(goals.red||0)-(colorCount.red||0));
+    goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount);
+    goals.fire=Math.max(0,(goals.fire||0)-fireClearedCount);
+    recountDynamicObjectives(); updateGoalsUI();
     const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay();
     const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`);}); requestAnimationFrame(()=>{Object.keys(movesMap).forEach(to=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px');});});
     clearSelection(); spendMove();
