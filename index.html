@@ -278,7 +278,7 @@
           return {dict:built.dict, pref:built.pref};
         } else {
           dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictFallback + ' (file mode)');
-          return {dict:dictionary, pref:prefixes};
+          return lang==='es' ? fallbackES : fallbackEN;
         }
       }
       var opts = isIOS ? {cap:50000, maxLen:12, prefixDepth:12, batch:4000} : {cap:Infinity, maxLen:12, prefixDepth:12, batch:12000};
@@ -308,8 +308,8 @@
     }catch(e){
       console.warn('Dictionary load failed', lang, e);
       dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictFallback);
-      // Fallback to local minimal sets (built below)
-      return {dict:dictionary, pref:prefixes};
+      // Fallback to local minimal sets (built above)
+      return lang==='es' ? fallbackES : fallbackEN;
     }
   }
 
@@ -347,10 +347,12 @@
   const readable=bg=>relL(hexToRgb(bg))>0.5?'#111':'#fff';
   const tint=(hex,amt)=>{const {r,g,b}=hexToRgb(hex);const m=c=>Math.min(255,Math.round(c+(255-c)*amt));const rr=m(r),gg=m(g),bb=m(b);return '#'+[rr,gg,bb].map(v=>v.toString(16).padStart(2,'0')).join('')};
 
-  // small local fallback dic
-  const wordList=["ABLE","ABOUT","APPLE","POOL","HOUSE","LIGHT","GREEN","BLUE","YELLOW","WORLD","STONE","FROZEN","LEVEL","MOVE","GOAL","ROOM","ROAD","WATER","PLAY","WORD","WORDS","BOOK","BOOKS"];
-  const dictionary=new Set(wordList.map(w=>w.toUpperCase()));
-  const prefixes=new Set(); for(const w of wordList){const u=w.toUpperCase(); for(let i=1;i<=u.length;i++) prefixes.add(u.slice(0,i));}
+  // Small local fallback dictionaries per language (offline / file://)
+  const wordListEN=["ABLE","ABOUT","APPLE","POOL","HOUSE","LIGHT","GREEN","BLUE","YELLOW","WORLD","STONE","FROZEN","LEVEL","MOVE","GOAL","ROOM","ROAD","WATER","PLAY","WORD","WORDS","BOOK","BOOKS"];
+  const wordListES=["CASA","PERRO","GATO","ROJO","AZUL","VERDE","MADRE","PADRE","NIÑO","NIÑA","DADO","LAGO","AMIGO","AMIGA","LIBRO","LIBROS","AGUA","JUEGO","MUNDO","PALABRA","PALABRAS","LUZ","NIVEL"];
+  function buildFallback(words, lang){ const dict=new Set(), pref=new Set(); for(const w of words){ const u=normalizeWord(lang, String(w).toUpperCase()); dict.add(u); for(let i=1;i<=Math.min(12,u.length);i++) pref.add(u.slice(0,i)); } return {dict,pref}; }
+  const fallbackEN = buildFallback(wordListEN, 'en');
+  const fallbackES = buildFallback(wordListES, 'es');
 
   const boardEl=document.getElementById('board');
   const tilesEl=document.getElementById('tiles');
@@ -593,7 +595,19 @@
   }
 
   function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); document.querySelectorAll('.hint-ord').forEach(e=>e.remove()); }
-  function scheduleHint(){ clearTimeout(hintTimer); if(dictLoading) return; hintTimer=setTimeout(function(){ if(!dictLoading) showAnyHint(); }, HINT_DELAY_MS); }
+  function scheduleHint(){
+    clearTimeout(hintTimer);
+    // Always schedule a timer based on current delay; when it fires, it will
+    // re-check dictLoading and reschedule itself if needed.
+    hintTimer = setTimeout(function fireHint(){
+      if(dictLoading){
+        // try again shortly to avoid being stuck
+        hintTimer = setTimeout(fireHint, 500);
+        return;
+      }
+      showAnyHint();
+    }, HINT_DELAY_MS);
+  }
   function showHintPath(path){ path.forEach((i,ord)=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('hint'); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
   async function showAnyHint(){
     if(dictLoading) return;
@@ -634,11 +648,26 @@
   function enterTargeting(type,from){ targeting={type,from}; boardEl.classList.add('targeting'); toast(type==='breaker'?(currentLang==='es'?'Toca una pieza para romper':'Tap a tile to break'): (currentLang==='es'?'Elige objetivo':'Choose a target')); }
 
   function explodeAffected(affected, from){
-    affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
+    // Expand chain reactions: if a row/col booster is within affected,
+    // include their entire row/column as well (single-wave expansion).
+    const toProcess=[...affected];
+    const seen=new Set(affected);
+    while(toProcess.length){
+      const j=toProcess.pop();
+      const t=grid[j];
+      if(!t || !t.power) continue;
+      if(t.power==='row'){
+        const [r]=rc(j); for(let cc=0;cc<COLS;cc++){ const k=idx(r,cc); if(!seen.has(k)){ seen.add(k); toProcess.push(k); } }
+      } else if(t.power==='col'){
+        const [,c]=rc(j); for(let rr=0;rr<ROWS;rr++){ const k=idx(rr,c); if(!seen.has(k)){ seen.add(k); toProcess.push(k); } }
+      }
+    }
+    // Apply the expanded set
+    seen.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
     setTimeout(()=>{
       const colorCount={yellow:0,green:0,blue:0,purple:0,red:0};
-      affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
-      if(grid[from]) grid[from]=null; // remove booster tile to allow gravity/refill
+      seen.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
+      if(grid[from]) grid[from]=null; // remove original booster tile to allow gravity/refill
       goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.purple=Math.max(0,(goals.purple||0)-(colorCount.purple||0)); goals.red=Math.max(0,(goals.red||0)-(colorCount.red||0));
       recountDynamicObjectives(); updateGoalsUI();
       const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay();
@@ -662,8 +691,18 @@
     if(type==='breaker'){ affected.add(target); }
     else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
-    else if(type==='rainbow'){ affected.add(target); }
-    explodeAffected(affected, from); if(source==='inventory'){ if(inventory[type]>0){ inventory[type]--; updateInventoryUI(); } } targeting=null; boardEl.classList.remove('targeting'); }
+    else if(type==='rainbow'){
+      // Inventory rainbow places a rainbow booster tile at the target.
+      grid[target] = {letter:'', colorKey:'booster', color:'#a87657', obstacle:null, frozen:false, power:'rainbow'};
+      render();
+      if(source==='inventory'){ if(inventory[type]>0){ inventory[type]--; updateInventoryUI(); } }
+      targeting=null; boardEl.classList.remove('targeting');
+      toast(currentLang==='es'?'Comodín colocado':'Wildcard placed');
+      return;
+    }
+    explodeAffected(affected, from);
+    if(source==='inventory'){ if(inventory[type]>0){ inventory[type]--; updateInventoryUI(); } }
+    targeting=null; boardEl.classList.remove('targeting'); }
 
   // Debug menu + buttons
   if(document.getElementById('debugBtn')){ debugBtn.addEventListener('click',(e)=>{e.stopPropagation(); debugMenu.classList.toggle('show');}); document.addEventListener('click',(e)=>{ if(!debugMenu.contains(e.target) && e.target!==debugBtn){ debugMenu.classList.remove('show'); }}); }
@@ -696,14 +735,16 @@
   if(hintDelayInput){
     // initialize with current value in seconds
     hintDelayInput.value = Math.max(2, Math.round(HINT_DELAY_MS/1000));
-    hintDelayInput.addEventListener('change', ()=>{
+    const onDelayChange = ()=>{
       const v = Number(hintDelayInput.value);
       if(!isNaN(v) && v>=2 && v<=60){
         HINT_DELAY_MS = Math.round(v*1000);
         toast((currentLang==='es'?'Hint en ':'Hint in ') + v + 's');
         scheduleHint();
       }
-    });
+    };
+    hintDelayInput.addEventListener('change', onDelayChange);
+    hintDelayInput.addEventListener('input', onDelayChange);
   }
   
 
@@ -754,7 +795,16 @@
     const bl = m.querySelector('#btnLose'); if(bl) bl.textContent = s.loseBtn;
     m.hidden = false;
   }
-  function restartLevel(){ moves=20; movesEl.textContent=moves; makeEmpty(); if(!loadLevelFromData(level)){ placeInitial(); } render(); scheduleHint(); refreshDebugOverlay(); updateGoalsUI(); }
+  async function restartLevel(){
+    moves=20; movesEl.textContent=moves;
+    makeEmpty();
+    const ok = await loadLevelFromData(level, true);
+    if(!ok){ placeInitial(); }
+    render();
+    scheduleHint();
+    refreshDebugOverlay();
+    updateGoalsUI();
+  }
   function spawnConfetti(){
     const container=document.createElement('div'); container.style.cssText='position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50'; document.body.appendChild(container);
     const colors=['#f87171','#60a5fa','#34d399','#fbbf24','#a78bfa']; const n=80;
