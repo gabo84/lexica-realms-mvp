@@ -30,7 +30,10 @@
     .cell .over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px}
     .row{display:flex;gap:6px;align-items:center;margin:6px 0}
     .right .group{background:#fff;border-radius:10px;padding:8px;margin-bottom:10px}
-    .weights{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+    .weights{display:grid;gap:6px}
+    .weights.letters{grid-template-columns:repeat(2, 1fr)}
+    .weights.colors{grid-template-columns:1fr}
+    .weights .w input{ text-align:right; }
     .weights .w{display:flex;gap:4px;align-items:center}
     .hint-dead{outline:3px dashed rgba(255,0,110,.6); outline-offset:-3px;}
     .note{font-size:12px;opacity:.75}
@@ -63,14 +66,16 @@
         <div class="tool" data-tool="fire">🔥 Fire</div>
         <div class="tool" data-tool="erase">🧹 Erase</div>
       </div>
-      <div class="row"><label>Letter <input id="letter" type="text" value="A" maxlength="1" style="width:40px;text-transform:uppercase"></label></div>
-      <div class="row"><label>Color 
+      <div class="row" style="flex-wrap:wrap"><label>Letter <input id="letter" type="text" value="A" maxlength="1" style="width:40px;text-transform:uppercase"></label> <label style="margin-left:10px"><input id="chkRandLetter" type="checkbox"> Random letter %</label></div>
+      <div class="row" style="flex-wrap:wrap"><label>Color 
         <select id="color">
-          <option value="yellow">yellow</option>
-          <option value="green">green</option>
+          <option value="red">red</option>
           <option value="blue">blue</option>
+          <option value="yellow" selected>yellow</option>
+          <option value="green">green</option>
+          <option value="purple">violet</option>
         </select>
-      </label></div>
+      </label> <label style="margin-left:10px"><input id="chkRandColor" type="checkbox"> Random color %</label></div>
       <div class="row"><label>Ice layers <input id="iceLayers" type="number" value="2" min="1" max="5" style="width:70px"></label></div>
       <div class="row"><label>Fire stage 
         <select id="fireStage"><option value="1">1 dormant</option><option value="2">2 active</option><option value="3">3 spreading</option></select>
@@ -87,16 +92,25 @@
     <div class="panel right">
       <h3>Settings</h3>
       <div class="group">
+        <div class="row"><label>Objective red <input id="objRed" type="number" value="0" style="width:90px"></label></div>
+        <div class="row"><label>Objective blue <input id="objBlue" type="number" value="10" style="width:90px"></label></div>
         <div class="row"><label>Objective yellow <input id="objYellow" type="number" value="20" style="width:90px"></label></div>
         <div class="row"><label>Objective green <input id="objGreen" type="number" value="15" style="width:90px"></label></div>
-        <div class="row"><label>Objective blue <input id="objBlue" type="number" value="10" style="width:90px"></label></div>
+        <div class="row"><label>Objective violet <input id="objPurple" type="number" value="0" style="width:90px"></label></div>
         <div class="row"><label>Objective ice <input id="objIce" type="number" value="0" style="width:90px"></label></div>
         <div class="row"><label>Objective fire <input id="objFire" type="number" value="0" style="width:90px"></label></div>
       </div>
 
       <div class="group">
-        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Letter weights</strong> <button id="btnResetWeights">Reset</button></div>
-        <div id="weights" class="weights"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Letter weights % (sum 100)</strong> <button id="btnResetWeights">Reset</button></div>
+        <div id="weightsLetters" class="weights letters"></div>
+      </div>
+
+      <div class="group">
+        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Color weights % (sum 100)</strong> <button id="btnResetColorWeights">Reset</button></div>
+        <div class="weights colors" id="colorWeights"></div>
+        <div class="note">Colors used for random fills: red, blue, yellow, green, violet (purple)</div>
+        <div class="row"><button id="btnFillEmpty">Fill empty cells (by weights)</button></div>
       </div>
 
       <div class="group">
@@ -108,28 +122,40 @@
   <script>
     // State
     let COLS=8, ROWS=10; const gridEl=document.getElementById('grid');
-    let grid=Array.from({length:ROWS*COLS},()=>({type:'letter',letter:'A',color:'yellow'}));
+    // Start with fully-random placeholders: letter empty + grey (random color)
+    let grid=Array.from({length:ROWS*COLS},()=>({type:'letter',letter:'',color:'random'}));
     let mouseDown=false, currentTool='letter';
 
     const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     const defaultWeights={E:12,A:9,O:8,S:6,I:6,N:6,L:5,R:5,U:5,D:4,T:4,C:4,P:3,M:3,Y:2,B:2,G:2,H:2,V:2,J:1,K:1,Q:1,W:1,X:1,Z:1,F:2};
-    const weightsEl=document.getElementById('weights');
-    function renderWeights(){ weightsEl.innerHTML=''; letters.forEach(ch=>{ const w=document.createElement('div'); w.className='w'; w.innerHTML=`<span style="width:16px;display:inline-block">${ch}</span><input type="number" min="0" value="${weights[ch]||0}" style="width:60px">`; w.querySelector('input').addEventListener('input',e=>{ weights[ch]=Number(e.target.value||0); saveAutosave(); }); weightsEl.appendChild(w); }); }
-    let weights={...defaultWeights}; renderWeights();
+   
+    // normalize defaultWeights to %
+    function normalizeCountsToPercent(obj){ const s=Object.values(obj).reduce((a,b)=>a+b,0)||1; const out={}; let acc=0, keys=Object.keys(obj); keys.forEach((k,i)=>{ let p = (obj[k]*100)/s; if(i<keys.length-1) { p = Math.round(p*10)/10; acc+=p; out[k]=p; } else { out[k]=Math.max(0, Math.round((100-acc)*10)/10); } }); return out; }
+    let weights=normalizeCountsToPercent(defaultWeights); // letter %
+    const weightsEl=document.getElementById('weightsLetters');
+    function renderWeights(){ weightsEl.innerHTML=''; letters.forEach(ch=>{ const w=document.createElement('div'); w.className='w'; const val=(weights[ch]||0); w.innerHTML=`<span style="width:16px;display:inline-block">${ch}</span><input type="number" step="0.1" min="0" value="${val}" style="width:70px">%`; w.querySelector('input').addEventListener('input',e=>{ weights[ch]=Number(e.target.value||0); saveAutosave(); }); weightsEl.appendChild(w); }); }
+    renderWeights();
+
+    // color weights %
+    const colorKeys=['red','blue','yellow','green','purple'];
+    let colorWeights={ red:10, blue:20, yellow:30, green:30, purple:10 };
+    const colorWeightsEl=document.getElementById('colorWeights');
+    function renderColorWeights(){ colorWeightsEl.innerHTML=''; colorKeys.forEach(k=>{ const d=document.createElement('div'); d.className='w'; const v=colorWeights[k]||0; d.innerHTML=`<span style="width:48px;display:inline-block;text-transform:capitalize">${k}</span><input type="number" step="0.1" min="0" value="${v}" style="width:70px">%`; d.querySelector('input').addEventListener('input',e=>{ colorWeights[k]=Number(e.target.value||0); saveAutosave(); }); colorWeightsEl.appendChild(d); }); }
+    renderColorWeights();
 
     // Grid helpers
     const idx=(r,c)=>r*COLS+c; const rc=i=>[Math.floor(i/COLS),i%COLS];
     function ensureSize(){ gridEl.style.gridTemplateColumns=`repeat(${COLS},1fr)`; gridEl.style.gridTemplateRows=`repeat(${ROWS},1fr)`; gridEl.style.aspectRatio=`${COLS}/${ROWS}`; }
     ensureSize();
 
-    function draw(){ gridEl.innerHTML=''; grid.forEach((cell,i)=>{ const d=document.createElement('div'); d.className='cell'; d.dataset.i=i; d.addEventListener('contextmenu',ev=>ev.preventDefault()); if(cell.type==='letter'){ d.classList.add('letter'); d.style.background=cell.color==='yellow'? 'linear-gradient(135deg,#fde68a,#fcd34d)':(cell.color==='green'?'linear-gradient(135deg,#6ee7b7,#34d399)':'linear-gradient(135deg,#93c5fd,#60a5fa)'); d.textContent=(cell.letter||'').toUpperCase(); }
+    function draw(){ gridEl.innerHTML=''; grid.forEach((cell,i)=>{ const d=document.createElement('div'); d.className='cell'; d.dataset.i=i; d.addEventListener('contextmenu',ev=>ev.preventDefault()); if(cell && cell.type==='letter'){ d.classList.add('letter'); let bg='linear-gradient(135deg,#e5e7eb,#cbd5e1)'; if(cell.color==='random') bg='linear-gradient(135deg,#e5e7eb,#cbd5e1)'; else if(cell.color==='red') bg='linear-gradient(135deg,#fda4af,#ef4444)'; else if(cell.color==='blue') bg='linear-gradient(135deg,#93c5fd,#60a5fa)'; else if(cell.color==='yellow') bg='linear-gradient(135deg,#fde68a,#fcd34d)'; else if(cell.color==='green') bg='linear-gradient(135deg,#6ee7b7,#34d399)'; else if(cell.color==='purple') bg='linear-gradient(135deg,#e9d5ff,#a78bfa)'; d.style.background=bg; const letterDisplay=(cell.letter && cell.letter.length)? cell.letter.toUpperCase() : '%'; d.textContent=letterDisplay; }
       else if(cell.type==='ice'){ d.style.background='linear-gradient(135deg,#c9f2ff,#b6e0ff)'; const s=document.createElement('div'); s.className='over'; s.textContent='🧊×'+(cell.layers||1); d.appendChild(s); }
       else if(cell.type==='stone'){ d.style.background='#bfc4cc'; const s=document.createElement('div'); s.className='over'; s.textContent='🪨'; d.appendChild(s); }
       else if(cell.type==='fire'){ d.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const s=document.createElement('div'); s.className='over'; s.textContent= cell.stage===1?'🧨':(cell.stage===2?'🔥':'🔥+'); d.appendChild(s); }
       gridEl.appendChild(d); }); }
     draw();
 
-    function place(i){ if(i<0) return; const tool=currentTool; if(tool==='erase'){ grid[i]=null; } else if(tool==='letter'){ const letter=(document.getElementById('letter').value||'A').toUpperCase(); const color=document.getElementById('color').value||'yellow'; grid[i]={type:'letter',letter,color}; } else if(tool==='ice'){ const layers=Math.max(1,Number(document.getElementById('iceLayers').value)||1); grid[i]={type:'ice',layers}; } else if(tool==='stone'){ grid[i]={type:'stone'}; } else if(tool==='fire'){ const stage=Number(document.getElementById('fireStage').value)||1; grid[i]={type:'fire',stage}; } draw(); saveAutosave(); }
+    function place(i){ if(i<0) return; const tool=currentTool; if(tool==='erase'){ grid[i]=null; } else if(tool==='letter'){ let letter=(document.getElementById('letter').value||'A').toUpperCase(); const colorBox=document.getElementById('color'); let color=colorBox.value||'yellow'; const randL=document.getElementById('chkRandLetter').checked; const randC=document.getElementById('chkRandColor').checked; if(randL) letter=''; if(randC) color='random'; grid[i]={type:'letter',letter,color}; } else if(tool==='ice'){ const layers=Math.max(1,Number(document.getElementById('iceLayers').value)||1); grid[i]={type:'ice',layers}; } else if(tool==='stone'){ grid[i]={type:'stone'}; } else if(tool==='fire'){ const stage=Number(document.getElementById('fireStage').value)||1; grid[i]={type:'fire',stage}; } draw(); saveAutosave(); }
 
     // Interactions
     gridEl.addEventListener('mousedown',e=>{ mouseDown=true; const i=Number(e.target.closest('.cell')?.dataset?.i||-1); place(i); });
@@ -146,16 +172,22 @@
     document.getElementById('btnResize').addEventListener('click',()=>{ COLS=Math.max(1,Number(document.getElementById('cols').value)||8); ROWS=Math.max(1,Number(document.getElementById('rows').value)||10); const newGrid=Array.from({length:ROWS*COLS},(_,k)=> grid[k]||null); grid=newGrid; ensureSize(); draw(); saveAutosave(); });
 
     // Export / Import
-    function exportJSON(){ const objectives={ yellow:Number(objYellow.value||0), green:Number(objGreen.value||0), blue:Number(objBlue.value||0), ice:Number(objIce.value||0), fire:Number(objFire.value||0) }; const payload={ cols:COLS, rows:ROWS, grid:new Array(ROWS*COLS).fill(null).map((_,i)=>grid[i]||null), objectives, letterWeights:weights }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`level_${COLS}x${ROWS}.json`; a.click(); URL.revokeObjectURL(a.href); }
+    function sumPercent(obj){ return Object.values(obj).reduce((a,b)=>a+Number(b||0),0); }
+    function validPerc(obj){ const s=sumPercent(obj); return Math.abs(s-100)<=0.01; }
+    function pickWeighted(map){ const total=sumPercent(map); let r=Math.random()*total; for(const [k,v] of Object.entries(map)){ r-=Number(v||0); if(r<=0) return k; } return Object.keys(map)[0]; }
+    function fillEmptyByWeights(){ if(!validPerc(weights)){ toast('Letters % must sum 100'); return; } if(!validPerc(colorWeights)){ toast('Colors % must sum 100'); return; } for(let i=0;i<grid.length;i++){ if(!grid[i]){ const letter=pickWeighted(weights); const color=pickWeighted(colorWeights); grid[i]={type:'letter',letter,color}; } } draw(); saveAutosave(); }
+    function exportJSON(){ if(!validPerc(weights)){ toast('Letters % must sum 100'); return; } if(!validPerc(colorWeights)){ toast('Colors % must sum 100'); return; } const objectives={ red:Number(objRed.value||0), blue:Number(objBlue.value||0), yellow:Number(objYellow.value||0), green:Number(objGreen.value||0), purple:Number(objPurple.value||0), ice:Number(objIce.value||0), fire:Number(objFire.value||0) }; const payload={ cols:COLS, rows:ROWS, grid:new Array(ROWS*COLS).fill(null).map((_,i)=>grid[i]||null), objectives, letterWeights:weights, colorWeights:colorWeights }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`level_${COLS}x${ROWS}.json`; a.click(); URL.revokeObjectURL(a.href); }
     document.getElementById('btnExport').addEventListener('click',exportJSON);
     document.getElementById('btnImport').addEventListener('click',()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=async()=>{ const file=inp.files[0]; if(!file) return; try{ const txt=await file.text(); const data=JSON.parse(txt); COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS; grid=data.grid||grid; weights=data.letterWeights||weights; objYellow.value=(data.objectives&&data.objectives.yellow)||0; objGreen.value=(data.objectives&&data.objectives.green)||0; objBlue.value=(data.objectives&&data.objectives.blue)||0; objIce.value=(data.objectives&&data.objectives.ice)||0; objFire.value=(data.objectives&&data.objectives.fire)||0; renderWeights(); ensureSize(); draw(); saveAutosave(); toast('Level imported'); }catch(e){ toast('Import failed'); console.warn(e); } }; inp.click(); });
 
     // Weights
-    document.getElementById('btnResetWeights').addEventListener('click',()=>{ weights={...defaultWeights}; renderWeights(); saveAutosave(); });
+    document.getElementById('btnResetWeights').addEventListener('click',()=>{ weights=normalizeCountsToPercent(defaultWeights); renderWeights(); saveAutosave(); });
+    document.getElementById('btnResetColorWeights').addEventListener('click',()=>{ colorWeights={ red:10, blue:20, yellow:30, green:30, purple:10 }; renderColorWeights(); saveAutosave(); });
+    document.getElementById('btnFillEmpty').addEventListener('click', fillEmptyByWeights);
 
     // Autosave
-    function saveAutosave(){ try{ localStorage.setItem('level_creator_autosave', JSON.stringify({COLS,ROWS,grid,weights, objectives:{yellow:objYellow.value,green:objGreen.value,blue:objBlue.value,ice:objIce.value,fire:objFire.value}})); }catch(_){} }
-    (function(){ try{ const raw=localStorage.getItem('level_creator_autosave'); if(!raw) return; const d=JSON.parse(raw); if(d.COLS) COLS=d.COLS; if(d.ROWS) ROWS=d.ROWS; if(d.grid) grid=d.grid; if(d.weights) weights=d.weights; if(d.objectives){ objYellow.value=d.objectives.yellow||0; objGreen.value=d.objectives.green||0; objBlue.value=d.objectives.blue||0; objIce.value=d.objectives.ice||0; objFire.value=d.objectives.fire||0; } ensureSize(); renderWeights(); draw(); }catch(_){} })();
+    function saveAutosave(){ try{ localStorage.setItem('level_creator_autosave', JSON.stringify({COLS,ROWS,grid,weights,colorWeights, objectives:{red:objRed.value,blue:objBlue.value,yellow:objYellow.value,green:objGreen.value,purple:objPurple.value,ice:objIce.value,fire:objFire.value}})); }catch(_){} }
+    (function(){ try{ const raw=localStorage.getItem('level_creator_autosave'); if(!raw) return; const d=JSON.parse(raw); if(d.COLS) COLS=d.COLS; if(d.ROWS) ROWS=d.ROWS; if(d.grid) grid=d.grid; if(d.weights) weights=d.weights; if(d.colorWeights) colorWeights=d.colorWeights; if(d.objectives){ objRed.value=d.objectives.red||0; objBlue.value=d.objectives.blue||0; objYellow.value=d.objectives.yellow||0; objGreen.value=d.objectives.green||0; objPurple.value=d.objectives.purple||0; objIce.value=d.objectives.ice||0; objFire.value=d.objectives.fire||0; } ensureSize(); renderWeights(); renderColorWeights(); draw(); }catch(_){} })();
 
     // Dictionary + autotest (local data first)
     const LOCAL_DICT_EN='../data/english_words.txt';
@@ -178,4 +210,3 @@
   </script>
 </body>
 </html>
-
