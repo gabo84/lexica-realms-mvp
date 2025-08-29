@@ -565,8 +565,8 @@
         if(candidates.length){ const j=candidates[Math.floor(Math.random()*candidates.length)]; moves.push({from:i,to:j}); }
       }
     }
-    // apply moves (avoid collisions by letting later overwrite earlier if same dest)
-    moves.forEach(({from,to})=>{ grid[to]={letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:2}; grid[from]=newTile(); });
+    // apply moves (propagation: keep original, add new 🔥 on destination)
+    moves.forEach(({from,to})=>{ grid[to]={letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:2}; /* keep original as 🔥 */ });
     recountDynamicObjectives(); render();
   }
 
