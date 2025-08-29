@@ -116,12 +116,7 @@
   <header>
     <div class="stat">
       <span class="pill"><span id="lblMoves">Moves</span> <span id="moves">20</span></span>
-      <div class="goals-bar">
-        <div class="goal-item"><div class="goal-swatch" style="background:#60a5fa"></div><div class="goal-num" id="goalB">20</div></div>
-        <div class="goal-item"><div class="goal-swatch" style="background:#fcd34d"></div><div class="goal-num" id="goalY">20</div></div>
-        <div class="goal-item"><div class="goal-swatch" style="background:#34d399"></div><div class="goal-num" id="goalG">20</div></div>
-        <div class="goal-item"><div class="goal-swatch" style="display:flex;align-items:center;justify-content:center;background:#b6e0ff;color:#114;font-size:18px;">🧊</div><div class="goal-num" id="goalIce">6</div></div>
-      </div>
+      <div class="goals-bar" id="goalsBar"></div>
     </div>
     <div class="debug-wrap">
       <button class="debug-badge" id="debugBtn" title="Open debug menu" aria-label="Debug">🪲</button>
@@ -351,22 +346,18 @@
 
   tilesEl.style.setProperty('--cols',COLS);
   tilesEl.style.setProperty('--rows',ROWS);
-  boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
-
+  // Fixed phone-like sizing for tiles
+  const CELL_PX=44, GAP_PX=12, PAD_PX=12;
   function ensureBoardSize(){
-    const rect=boardEl.getBoundingClientRect();
-    if(rect.height<10){
-      const w=boardEl.clientWidth || boardEl.getBoundingClientRect().width || 320;
-      boardEl.style.height = Math.round(w * (ROWS/COLS)) + 'px';
-    }
+    const w = PAD_PX*2 + COLS*CELL_PX + (COLS-1)*GAP_PX;
+    const h = PAD_PX*2 + ROWS*CELL_PX + (ROWS-1)*GAP_PX;
+    boardEl.style.width = w+'px';
+    boardEl.style.height = h+'px';
+    boardEl.style.aspectRatio='';
+    tilesEl.style.gap = GAP_PX+'px';
   }
 
-  const cellSizePx=()=>{
-    const h=boardEl.getBoundingClientRect().height;
-    if(h>0) return h/ROWS;
-    const w=boardEl.getBoundingClientRect().width;
-    return (w*(ROWS/COLS))/ROWS;
-  };
+  const cellSizePx=()=>CELL_PX;
   const idx=(r,c)=>r*COLS+c;
   const rc=i=>[Math.floor(i/COLS),i%COLS];
   const inBounds=(r,c)=>r>=0&&c>=0&&r<ROWS&&c<COLS;
@@ -461,13 +452,31 @@
   }
 
   // Goals by color
-  let goals={yellow:20, green:20, blue:20, ice:0, fire:0};
-  const goalYEl=document.getElementById('goalY'); const goalGEl=document.getElementById('goalG'); const goalBEl=document.getElementById('goalB'); const goalIceEl=document.getElementById('goalIce');
-  const updateGoalsUI=()=>{goalYEl.textContent=goals.yellow; goalGEl.textContent=goals.green; goalBEl.textContent=goals.blue; if(goalIceEl) goalIceEl.textContent=(goals.ice!=null?goals.ice:0);};
-  const goalsComplete=()=> goals.yellow<=0 && goals.green<=0 && goals.blue<=0 && ((goals.ice!=null?goals.ice:0)<=0) && ((goals.fire!=null?goals.fire:0)<=0);
+  let goals={yellow:20, green:20, blue:20, purple:0, red:0, ice:0, fire:0};
+  const goalsBar=document.getElementById('goalsBar');
+  function renderGoalsBar(){ if(!goalsBar) return; goalsBar.innerHTML=''; const entries=[['blue',''],['yellow',''],['green',''],['purple',''],['red',''],['ice','🧊']]; entries.forEach(([key,emoji])=>{ const val=Number(goals[key]||0); if(val>0){ const item=document.createElement('div'); item.className='goal-item'; const sw=document.createElement('div'); sw.className='goal-swatch'; if(key==='ice'){ sw.style.background='#b6e0ff'; sw.style.display='flex'; sw.style.alignItems='center'; sw.style.justifyContent='center'; sw.textContent='🧊'; } else { sw.style.background=COLOR_HEX[key]||'#ddd'; }
+      const num=document.createElement('div'); num.className='goal-num'; num.id='goal_'+key; num.textContent=val; item.appendChild(sw); item.appendChild(num); goalsBar.appendChild(item);} }); }
+  const updateGoalsUI=()=>{ renderGoalsBar(); Object.keys(goals).forEach(k=>{ const el=document.getElementById('goal_'+k); if(el) el.textContent=goals[k]; }); };
+  function goalsComplete(){ for(const [k,v] of Object.entries(goals)){ if(Number(v||0)>0){ return false; } } return true; }
+
+  function setProceduralGoals(total){
+    total = total || 60; // default total colored tiles to collect
+    const keys=['yellow','green','blue','purple','red'];
+    const weights = keys.map(k=>Number(colorWeightsMap[k]||0));
+    const sum = weights.reduce((a,b)=>a+b,0) || 1;
+    // initial distribution
+    let distrib = keys.map((k,i)=>({k, v: Math.floor(total * (weights[i]/sum)) }));
+    // spread remainder to highest weights
+    let assigned = distrib.reduce((a,o)=>a+o.v,0); let rem = total - assigned;
+    const order = [...distrib].sort((a,b)=> (colorWeightsMap[b.k]||0)-(colorWeightsMap[a.k]||0));
+    for(let i=0; i<order.length && rem>0; i++){ order[i].v++; rem--; }
+    // rebuild goals
+    goals.yellow=goals.green=goals.blue=goals.purple=goals.red=0; goals.ice=goals.fire=0;
+    distrib.forEach(o=>{ goals[o.k]=o.v; }); updateGoalsUI();
+  }
 
   function spendMove(){ moves=Math.max(0,moves-1); movesEl.textContent=moves; }
-  async function nextLevel(){ level++; moves=20; movesEl.textContent=moves; goals={yellow:20,green:20,blue:20,ice:0,fire:0}; updateGoalsUI(); makeEmpty(); const ok=await loadLevelFromData(level,true); if(!ok){ await loadLevelFromData(1,false); level=1; } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
+  async function nextLevel(){ level++; moves=20; movesEl.textContent=moves; makeEmpty(); let ok=await loadLevelFromData(level,true); if(!ok){ ok=await loadLevelFromData(1,false); if(!ok){ setProceduralGoals(60); placeInitial(); level=1; } } render(); refreshDebugOverlay(); toast(STRINGS[currentLang].lvlUp); spawnConfetti(); }
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
@@ -572,10 +581,10 @@
   function explodeAffected(affected, from){
     affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
     setTimeout(()=>{
-      const colorCount={yellow:0,green:0,blue:0};
+      const colorCount={yellow:0,green:0,blue:0,purple:0,red:0};
       affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
-      if(grid[from]) grid[from].power=null;
-      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0));
+      if(grid[from]) grid[from]=null; // remove booster tile to allow gravity/refill
+      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.purple=Math.max(0,(goals.purple||0)-(colorCount.purple||0)); goals.red=Math.max(0,(goals.red||0)-(colorCount.red||0));
       recountDynamicObjectives(); updateGoalsUI();
       const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay();
       const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); });
@@ -654,7 +663,7 @@
     COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS;
     tilesEl.style.setProperty('--cols',COLS);
     tilesEl.style.setProperty('--rows',ROWS);
-    boardEl.style.aspectRatio=`${COLS}/${ROWS}`;
+    ensureBoardSize();
     // Objectives
     goals={yellow: (data.objectives&&data.objectives.yellow)||0,
            green: (data.objectives&&data.objectives.green)||0,
@@ -700,7 +709,7 @@
   async function init(){
     moves=20; movesEl.textContent=moves;
     ensureBoardSize();
-    makeEmpty(); const ok=await loadLevelFromData(1,false); if(!ok){ placeInitial(); } render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
+    makeEmpty(); const ok=await loadLevelFromData(1,false); if(!ok){ setProceduralGoals(60); placeInitial(); } render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
     loadDictionary(currentLang).then(function(){ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
     // No sprites: boosters use emojis now
