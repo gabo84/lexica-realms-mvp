@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Lexica Realms – Level Creator</title>
+  <style>
+    :root{
+      --ink:#111; --shadow:rgba(0,0,0,.12);
+      --yellow:#fcd34d; --green:#34d399; --blue:#60a5fa; --purple:#a78bfa; --panel:#eef1f6;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; color:var(--ink); background:linear-gradient(180deg,#f6fbff,#f9f9ff);}    
+    header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#e9eaed;box-shadow:0 2px 8px var(--shadow);}
+    header .actions{display:flex;gap:8px;align-items:center}
+    button,select,input[type="number"],input[type="text"]{border:1px solid #cfd6e4;border-radius:10px;padding:8px 10px;background:#fff;}
+    button.primary{background:#60a5fa;color:#fff;border:none;font-weight:800}
+    .wrap{display:grid;grid-template-columns:260px 1fr 320px;gap:12px;max-width:1200px;margin:12px auto;padding:0 12px 20px;}
+    .panel{background:var(--panel);border-radius:14px;box-shadow:0 10px 30px var(--shadow);padding:12px;}
+    .panel h3{margin:0 0 8px 0}
+    .palette{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .tool{display:flex;align-items:center;justify-content:center;gap:6px;border:2px solid transparent;border-radius:12px;padding:10px;background:#fff;cursor:pointer;font-weight:800}
+    .tool.active{border-color:#111}
+    .tool .sw{width:18px;height:18px;border-radius:4px;}
+    .grid{position:relative;background:#f4f6f9;border-radius:12px;box-shadow:inset 0 0 0 1px #dbe1ee;aspect-ratio:8/10;display:grid;gap:8px;padding:8px}
+    .grid[data-ready="1"]{border:2px solid #9cc0ff}
+    .cell{display:flex;align-items:center;justify-content:center;border-radius:8px;background:#e7e9ef;user-select:none;position:relative;font-weight:900}
+    .cell.letter{color:#111;box-shadow:0 6px 14px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 0 rgba(0,0,0,.12)}
+    .cell .badge{position:absolute;bottom:4px;right:4px;background:#111;color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
+    .cell .over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px}
+    .row{display:flex;gap:6px;align-items:center;margin:6px 0}
+    .right .group{background:#fff;border-radius:10px;padding:8px;margin-bottom:10px}
+    .weights{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+    .weights .w{display:flex;gap:4px;align-items:center}
+    .hint-dead{outline:3px dashed rgba(255,0,110,.6); outline-offset:-3px;}
+    .note{font-size:12px;opacity:.75}
+    textarea{width:100%;min-height:100px}
+  </style>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23fff'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='44'%3E🧩%3C/text%3E%3C/svg%3E">
+  <script>
+    // Simple toast
+    function toast(msg){ let t=document.getElementById('toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s;z-index:9'; document.body.appendChild(t);} t.textContent=msg; t.style.opacity=1; clearTimeout(t._to); t._to=setTimeout(()=>t.style.opacity=0,1400); }
+  </script>
+</head>
+<body>
+  <header>
+    <div style="font-weight:900">Level Creator</div>
+    <div class="actions">
+      <label>Language <select id="lang"><option value="en">EN</option><option value="es">ES</option></select></label>
+      <button id="btnAutoTest">Auto‑test</button>
+      <button id="btnImport">Import</button>
+      <button id="btnExport" class="primary">Export JSON</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="panel left">
+      <h3>Palette</h3>
+      <div class="palette" id="palette">
+        <div class="tool active" data-tool="letter"><span class="sw" style="background:var(--yellow)"></span>Letter</div>
+        <div class="tool" data-tool="ice">🧊 Ice</div>
+        <div class="tool" data-tool="stone">🪨 Stone</div>
+        <div class="tool" data-tool="fire">🔥 Fire</div>
+        <div class="tool" data-tool="erase">🧹 Erase</div>
+      </div>
+      <div class="row"><label>Letter <input id="letter" type="text" value="A" maxlength="1" style="width:40px;text-transform:uppercase"></label></div>
+      <div class="row"><label>Color 
+        <select id="color">
+          <option value="yellow">yellow</option>
+          <option value="green">green</option>
+          <option value="blue">blue</option>
+        </select>
+      </label></div>
+      <div class="row"><label>Ice layers <input id="iceLayers" type="number" value="2" min="1" max="5" style="width:70px"></label></div>
+      <div class="row"><label>Fire stage 
+        <select id="fireStage"><option value="1">1 dormant</option><option value="2">2 active</option><option value="3">3 spreading</option></select>
+      </label></div>
+      <div class="row"><label>Size C×R <input id="cols" type="number" value="8" style="width:70px"> × <input id="rows" type="number" value="10" style="width:70px"></label><button id="btnResize">Apply</button></div>
+      <div class="note">Tip: click or drag to paint. Right‑click to clear.</div>
+    </div>
+
+    <div class="panel center">
+      <h3>Grid</h3>
+      <div id="grid" class="grid" data-ready="1" style="--cols:8;--rows:10"></div>
+    </div>
+
+    <div class="panel right">
+      <h3>Settings</h3>
+      <div class="group">
+        <div class="row"><label>Objective yellow <input id="objYellow" type="number" value="20" style="width:90px"></label></div>
+        <div class="row"><label>Objective green <input id="objGreen" type="number" value="15" style="width:90px"></label></div>
+        <div class="row"><label>Objective blue <input id="objBlue" type="number" value="10" style="width:90px"></label></div>
+        <div class="row"><label>Objective ice <input id="objIce" type="number" value="0" style="width:90px"></label></div>
+        <div class="row"><label>Objective fire <input id="objFire" type="number" value="0" style="width:90px"></label></div>
+      </div>
+
+      <div class="group">
+        <div style="display:flex;align-items:center;justify-content:space-between"><strong>Letter weights</strong> <button id="btnResetWeights">Reset</button></div>
+        <div id="weights" class="weights"></div>
+      </div>
+
+      <div class="group">
+        <div style="display:flex;gap:6px"><button id="btnHighlightDead">Highlight dead zones</button><button id="btnClearHighlight">Clear</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let COLS=8, ROWS=10; const gridEl=document.getElementById('grid');
+    let grid=Array.from({length:ROWS*COLS},()=>({type:'letter',letter:'A',color:'yellow'}));
+    let mouseDown=false, currentTool='letter';
+
+    const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const defaultWeights={E:12,A:9,O:8,S:6,I:6,N:6,L:5,R:5,U:5,D:4,T:4,C:4,P:3,M:3,Y:2,B:2,G:2,H:2,V:2,J:1,K:1,Q:1,W:1,X:1,Z:1,F:2};
+    const weightsEl=document.getElementById('weights');
+    function renderWeights(){ weightsEl.innerHTML=''; letters.forEach(ch=>{ const w=document.createElement('div'); w.className='w'; w.innerHTML=`<span style="width:16px;display:inline-block">${ch}</span><input type="number" min="0" value="${weights[ch]||0}" style="width:60px">`; w.querySelector('input').addEventListener('input',e=>{ weights[ch]=Number(e.target.value||0); saveAutosave(); }); weightsEl.appendChild(w); }); }
+    let weights={...defaultWeights}; renderWeights();
+
+    // Grid helpers
+    const idx=(r,c)=>r*COLS+c; const rc=i=>[Math.floor(i/COLS),i%COLS];
+    function ensureSize(){ gridEl.style.gridTemplateColumns=`repeat(${COLS},1fr)`; gridEl.style.gridTemplateRows=`repeat(${ROWS},1fr)`; gridEl.style.aspectRatio=`${COLS}/${ROWS}`; }
+    ensureSize();
+
+    function draw(){ gridEl.innerHTML=''; grid.forEach((cell,i)=>{ const d=document.createElement('div'); d.className='cell'; d.dataset.i=i; d.addEventListener('contextmenu',ev=>ev.preventDefault()); if(cell.type==='letter'){ d.classList.add('letter'); d.style.background=cell.color==='yellow'? 'linear-gradient(135deg,#fde68a,#fcd34d)':(cell.color==='green'?'linear-gradient(135deg,#6ee7b7,#34d399)':'linear-gradient(135deg,#93c5fd,#60a5fa)'); d.textContent=(cell.letter||'').toUpperCase(); }
+      else if(cell.type==='ice'){ d.style.background='linear-gradient(135deg,#c9f2ff,#b6e0ff)'; const s=document.createElement('div'); s.className='over'; s.textContent='🧊×'+(cell.layers||1); d.appendChild(s); }
+      else if(cell.type==='stone'){ d.style.background='#bfc4cc'; const s=document.createElement('div'); s.className='over'; s.textContent='🪨'; d.appendChild(s); }
+      else if(cell.type==='fire'){ d.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const s=document.createElement('div'); s.className='over'; s.textContent= cell.stage===1?'🧨':(cell.stage===2?'🔥':'🔥+'); d.appendChild(s); }
+      gridEl.appendChild(d); }); }
+    draw();
+
+    function place(i){ if(i<0) return; const tool=currentTool; if(tool==='erase'){ grid[i]=null; } else if(tool==='letter'){ const letter=(document.getElementById('letter').value||'A').toUpperCase(); const color=document.getElementById('color').value||'yellow'; grid[i]={type:'letter',letter,color}; } else if(tool==='ice'){ const layers=Math.max(1,Number(document.getElementById('iceLayers').value)||1); grid[i]={type:'ice',layers}; } else if(tool==='stone'){ grid[i]={type:'stone'}; } else if(tool==='fire'){ const stage=Number(document.getElementById('fireStage').value)||1; grid[i]={type:'fire',stage}; } draw(); saveAutosave(); }
+
+    // Interactions
+    gridEl.addEventListener('mousedown',e=>{ mouseDown=true; const i=Number(e.target.closest('.cell')?.dataset?.i||-1); place(i); });
+    gridEl.addEventListener('mousemove',e=>{ if(!mouseDown) return; const i=Number(e.target.closest('.cell')?.dataset?.i||-1); place(i); });
+    window.addEventListener('mouseup',()=>mouseDown=false);
+    gridEl.addEventListener('contextmenu',e=>{ const i=Number(e.target.closest('.cell')?.dataset?.i||-1); currentTool='erase'; setActiveTool(); place(i); currentTool=lastTool||'letter'; setActiveTool(); });
+
+    // Palette
+    const palette=document.getElementById('palette'); let lastTool='letter';
+    function setActiveTool(){ Array.from(palette.children).forEach(el=>el.classList.toggle('active', el.dataset.tool===currentTool)); }
+    palette.addEventListener('click',e=>{ const t=e.target.closest('.tool'); if(!t) return; currentTool=t.dataset.tool; if(currentTool!=='erase') lastTool=currentTool; setActiveTool(); });
+
+    // Resize
+    document.getElementById('btnResize').addEventListener('click',()=>{ COLS=Math.max(1,Number(document.getElementById('cols').value)||8); ROWS=Math.max(1,Number(document.getElementById('rows').value)||10); const newGrid=Array.from({length:ROWS*COLS},(_,k)=> grid[k]||null); grid=newGrid; ensureSize(); draw(); saveAutosave(); });
+
+    // Export / Import
+    function exportJSON(){ const objectives={ yellow:Number(objYellow.value||0), green:Number(objGreen.value||0), blue:Number(objBlue.value||0), ice:Number(objIce.value||0), fire:Number(objFire.value||0) }; const payload={ cols:COLS, rows:ROWS, grid:new Array(ROWS*COLS).fill(null).map((_,i)=>grid[i]||null), objectives, letterWeights:weights }; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`level_${COLS}x${ROWS}.json`; a.click(); URL.revokeObjectURL(a.href); }
+    document.getElementById('btnExport').addEventListener('click',exportJSON);
+    document.getElementById('btnImport').addEventListener('click',()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=async()=>{ const file=inp.files[0]; if(!file) return; try{ const txt=await file.text(); const data=JSON.parse(txt); COLS=Number(data.cols)||COLS; ROWS=Number(data.rows)||ROWS; grid=data.grid||grid; weights=data.letterWeights||weights; objYellow.value=(data.objectives&&data.objectives.yellow)||0; objGreen.value=(data.objectives&&data.objectives.green)||0; objBlue.value=(data.objectives&&data.objectives.blue)||0; objIce.value=(data.objectives&&data.objectives.ice)||0; objFire.value=(data.objectives&&data.objectives.fire)||0; renderWeights(); ensureSize(); draw(); saveAutosave(); toast('Level imported'); }catch(e){ toast('Import failed'); console.warn(e); } }; inp.click(); });
+
+    // Weights
+    document.getElementById('btnResetWeights').addEventListener('click',()=>{ weights={...defaultWeights}; renderWeights(); saveAutosave(); });
+
+    // Autosave
+    function saveAutosave(){ try{ localStorage.setItem('level_creator_autosave', JSON.stringify({COLS,ROWS,grid,weights, objectives:{yellow:objYellow.value,green:objGreen.value,blue:objBlue.value,ice:objIce.value,fire:objFire.value}})); }catch(_){} }
+    (function(){ try{ const raw=localStorage.getItem('level_creator_autosave'); if(!raw) return; const d=JSON.parse(raw); if(d.COLS) COLS=d.COLS; if(d.ROWS) ROWS=d.ROWS; if(d.grid) grid=d.grid; if(d.weights) weights=d.weights; if(d.objectives){ objYellow.value=d.objectives.yellow||0; objGreen.value=d.objectives.green||0; objBlue.value=d.objectives.blue||0; objIce.value=d.objectives.ice||0; objFire.value=d.objectives.fire||0; } ensureSize(); renderWeights(); draw(); }catch(_){} })();
+
+    // Dictionary + autotest (local data first)
+    const LOCAL_DICT_EN='../data/english_words.txt';
+    const LOCAL_DICT_ES='../data/spanish_words.json';
+    async function loadDict(lang){ try{ if(lang==='en'){ const t=await fetch(LOCAL_DICT_EN,{cache:'no-store'}).then(r=>r.text()); return t.split(/\r?\n/).filter(Boolean).map(w=>w.trim().toUpperCase()); } else { const a=await fetch(LOCAL_DICT_ES,{cache:'no-store'}).then(r=>r.json()); return a.map(x=>String(x).toUpperCase()); } }catch(e){ toast('Failed to load local dict'); return []; } }
+    function buildSets(words){ const dict=new Set(), pref=new Set(); for(const w of words){ if(w.length<3) continue; if(w.length>12) continue; const up=w.normalize('NFD').replace(/[\u0300-\u036f]/g,''); dict.add(up); for(let i=1;i<=Math.min(12,up.length);i++) pref.add(up.slice(0,i)); } return {dict,pref}; }
+    function inBounds(r,c){ return r>=0&&c>=0&&r<ROWS&&c<COLS; }
+    function countWords(sets){ const {dict,pref}=sets; const vis=new Array(ROWS*COLS).fill(false); let total=0; const maxLen=6; function dfs(path){ const word=path.map(i=>grid[i]).filter(t=>t&&t.type==='letter').map(t=>t.letter).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)) total++; if(path.length===maxLen) return; const last=path[path.length-1]; const rr=Math.floor(last/COLS), cc=last%COLS; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=rr+dr,nc=cc+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(vis[j]) continue; const cell=grid[j]; if(!cell || cell.type!=='letter') continue; vis[j]=true; path.push(j); dfs(path); path.pop(); vis[j]=false; } }
+      for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.type!=='letter') continue; vis[i]=true; dfs([i]); vis[i]=false; }
+      return total; }
+    function highlightDead(sets){ const {dict,pref}=sets; const vis=new Array(ROWS*COLS).fill(false); const part=new Array(ROWS*COLS).fill(false); const maxLen=6; function dfs(path){ const word=path.map(i=>grid[i]).filter(t=>t&&t.type==='letter').map(t=>t.letter).join('').toUpperCase(); if(!pref.has(word)) return; for(const i of path) part[i]=true; if(path.length===maxLen) return; const last=path[path.length-1]; const rr=Math.floor(last/COLS), cc=last%COLS; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=rr+dr,nc=cc+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(vis[j]) continue; const cell=grid[j]; if(!cell || cell.type!=='letter') continue; vis[j]=true; path.push(j); dfs(path); path.pop(); vis[j]=false; } }
+      for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.type!=='letter') continue; vis[i]=true; dfs([i]); vis[i]=false; }
+      // mark cells with no participation
+      document.querySelectorAll('.cell').forEach((el,k)=>{ el.classList.toggle('hint-dead', !part[k]); });
+    }
+
+    document.getElementById('btnAutoTest').addEventListener('click', async()=>{ const lang=document.getElementById('lang').value; toast('Testing…'); const words=await loadDict(lang); const sets=buildSets(words); const n=countWords(sets); toast('Words found: '+n); });
+    document.getElementById('btnHighlightDead').addEventListener('click', async()=>{ const lang=document.getElementById('lang').value; const sets=buildSets(await loadDict(lang)); highlightDead(sets); });
+    document.getElementById('btnClearHighlight').addEventListener('click', ()=>{ document.querySelectorAll('.cell').forEach(el=>el.classList.remove('hint-dead')); });
+  </script>
+</body>
+</html>
+

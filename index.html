@@ -434,6 +434,7 @@
       toast(STRINGS[currentLang].powerCreated);
     }
     goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount); updateGoalsUI();
+    recountIceGoals();
     const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay();
     const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`);}); requestAnimationFrame(()=>{Object.keys(movesMap).forEach(to=>{const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px');});});
     clearSelection(); spendMove();
@@ -444,9 +445,15 @@
   function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone' || cell.obstacle==='ice'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
   function refill(){ for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null) grid[i]=newTile(); } render(); }
 
-  function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); }
+  function recountIceGoals(){
+    // ensure ice objective matches remaining ice blockers on board
+    let count=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='ice') count++; }
+    if(goals && typeof goals.ice==='number'){ goals.ice=count; }
+  }
+
+  function clearHint(){ currentHint=null; document.querySelectorAll('.tile.hint').forEach(e=>e.classList.remove('hint')); document.querySelectorAll('.hint-ord').forEach(e=>e.remove()); }
   function scheduleHint(){ clearTimeout(hintTimer); if(dictLoading) return; hintTimer=setTimeout(function(){ if(!dictLoading) showAnyHint(); }, HINT_DELAY_MS); }
-  function showHintPath(path){ path.forEach(i=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el) el.classList.add('hint'); }); }
+  function showHintPath(path){ path.forEach((i,ord)=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('hint'); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
   async function showAnyHint(){
     if(dictLoading) return;
     clearHint(); const {dict,pref}=await loadDictionary(currentLang);
@@ -491,7 +498,7 @@
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){ affected.add(target); }
     affected.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
-    setTimeout(()=>{ const colorCount={yellow:0,green:0,blue:0}; affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; }); if(grid[from]) grid[from].power=null; goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); updateGoalsUI(); const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay(); const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); }); requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); }); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); nextLevel(); return; } },260); targeting=null; boardEl.classList.remove('targeting'); }
+    setTimeout(()=>{ const colorCount={yellow:0,green:0,blue:0}; affected.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; }); if(grid[from]) grid[from].power=null; goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); recountIceGoals(); updateGoalsUI(); const movesMap=applyGravity(); refill(); scheduleHint(); refreshDebugOverlay(); const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); }); requestAnimationFrame(()=>{ Object.keys(movesMap).forEach(to=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall','0px'); }); }); spendMove(); if(goalsComplete()){ toast(STRINGS[currentLang].objectivesDone); nextLevel(); return; } if(moves===0){ toast(STRINGS[currentLang].outOfMoves); nextLevel(); } },260); targeting=null; boardEl.classList.remove('targeting'); }
 
   // Debug menu + buttons
   if(document.getElementById('debugBtn')){ debugBtn.addEventListener('click',(e)=>{e.stopPropagation(); debugMenu.classList.toggle('show');}); document.addEventListener('click',(e)=>{ if(!debugMenu.contains(e.target) && e.target!==debugBtn){ debugMenu.classList.remove('show'); }}); }
