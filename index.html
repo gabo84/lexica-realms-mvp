@@ -546,19 +546,27 @@
       let f=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='fire') f++; } goals.fire=f; }
   }
   function processFireAfterMove(){
-    // simple state machine: stage2 -> stage3; stage3 spreads to one adjacent cell (if available)
-    const spreadTargets=[];
+    // Final behavior:
+    // 1) Stage 1 (🧨) that survives -> becomes Stage 2 (🔥) in place.
+    // 2) Stage 2 (🔥) that survives -> moves to one random adjacent eligible cell as Stage 2 (🔥).
+    const moves=[]; // {from,to}
     for(let i=0;i<grid.length;i++){
       const t=grid[i]; if(!t || t.obstacle!=='fire') continue; if(!t.stage) t.stage=1;
-      if(t.stage===2){ t.stage=3; }
-      else if(t.stage===3){
-        const [r,c]=rc(i); const candidates=[]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
-          if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(!cell || (cell.obstacle && cell.obstacle!=='ice')) continue; candidates.push(j);
+      if(t.stage===1){
+        // convert in place to active fire
+        t.stage=2;
+      }else if(t.stage===2){
+        // move to adjacent eligible cell
+        const [r,c]=rc(i); const candidates=[];
+        for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+          if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc);
+          const cell=grid[j]; if(cell && (cell.obstacle==='stone' || cell.obstacle==='ice' || cell.obstacle==='fire')) continue; candidates.push(j);
         }
-        if(candidates.length){ const j=candidates[Math.floor(Math.random()*candidates.length)]; spreadTargets.push(j); }
+        if(candidates.length){ const j=candidates[Math.floor(Math.random()*candidates.length)]; moves.push({from:i,to:j}); }
       }
     }
-    spreadTargets.forEach(j=>{ grid[j]={letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:2}; });
+    // apply moves (avoid collisions by letting later overwrite earlier if same dest)
+    moves.forEach(({from,to})=>{ grid[to]={letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:2}; grid[from]=newTile(); });
     recountDynamicObjectives(); render();
   }
 
