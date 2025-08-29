@@ -221,10 +221,10 @@
     "F": 2.3
   },
   "colorWeights": {
-    "red": 10,
-    "blue": 20,
-    "yellow": 30,
-    "green": 30,
-    "purple": 10
+    "red": 33,
+    "blue": 34,
+    "yellow": 33,
+    "green": 0,
+    "purple": 0
   }
 }

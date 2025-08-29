@@ -217,10 +217,10 @@
     "F": 2.3
   },
   "colorWeights": {
-    "red": 10,
-    "blue": 20,
-    "yellow": 30,
-    "green": 30,
-    "purple": 10
+    "red": 25,
+    "blue": 25,
+    "yellow": 25,
+    "green": 25,
+    "purple": 0
   }
 }
