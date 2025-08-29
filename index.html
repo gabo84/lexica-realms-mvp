@@ -99,7 +99,11 @@
 
   #board.targeting .tile{ cursor: crosshair; }
 
-  #bottom{width:100%; padding:14px 16px; display:flex; align-items:center; justify-content:center; background:#e9eaed; box-shadow:0 -2px 10px var(--shadow); position:sticky; bottom:0; z-index:5;}
+  /* Footer fixed bottom container */
+  #footer{position:fixed; left:0; right:0; bottom:0; padding-bottom:env(safe-area-inset-bottom); z-index:8;}
+  #footer .inner{max-width:480px; margin:0 auto;}
+  #inventory{display:flex;gap:12px;justify-content:space-around;align-items:center;margin:6px 12px 8px 12px;}
+  #bottom{width:100%; padding:14px 16px; display:flex; align-items:center; justify-content:center; background:#e9eaed; box-shadow:0 -2px 10px var(--shadow);} 
   #current-word{font-weight:900; letter-spacing:4px; font-size:20px; background:#fff; padding:10px 14px; border-radius:12px; box-shadow:0 2px 6px var(--shadow); min-width:200px; text-align:center;}
 
   #toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:9;}
@@ -139,7 +143,8 @@
 
   <div id="board" aria-label="Game board"><div id="tiles"></div></div>
   
-  <div id="inventory" style="display:flex;gap:12px;justify-content:space-around;align-items:center;margin:6px 12px 8px 12px;">
+  <div id="footer"><div class="inner">
+  <div id="inventory">
     <button class="inv-btn" data-type="breaker" title="Block breaker" style="width:56px;height:56px;border-radius:10px;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;">
       <span>🎯</span><small class="inv-count" id="inv_breaker">5</small>
     </button>
@@ -153,8 +158,8 @@
       <span>🃏</span><small class="inv-count" id="inv_rainbow">5</small>
     </button>
   </div>
-
   <div id="bottom"><div id="current-word">____</div></div>
+  </div></div>
 </div>
 <div id="toast"></div>
 
@@ -364,14 +369,26 @@
   tilesEl.style.setProperty('--cols',COLS);
   tilesEl.style.setProperty('--rows',ROWS);
   // Fixed phone-like sizing for tiles
-  const CELL_PX=44, GAP_PX=12, PAD_PX=12;
+  let CELL_PX=44; const GAP_PX=12, PAD_PX=12;
+  function footerHeight(){ const f=document.getElementById('footer'); return f? f.getBoundingClientRect().height : 0; }
+  function headerHeight(){ const h=document.querySelector('header'); return h? h.getBoundingClientRect().height : 0; }
   function ensureBoardSize(){
+    // Try to fit board between header and footer; scale down CELL_PX if needed
+    const availH = window.innerHeight - headerHeight() - footerHeight() - 16; // margin
+    const neededH = PAD_PX*2 + ROWS*CELL_PX + (ROWS-1)*GAP_PX;
+    if(availH < neededH){
+      const cell = Math.max(36, Math.floor((availH - PAD_PX*2 - (ROWS-1)*GAP_PX) / ROWS));
+      CELL_PX = cell;
+    }else{
+      CELL_PX = 44;
+    }
     const w = PAD_PX*2 + COLS*CELL_PX + (COLS-1)*GAP_PX;
     const h = PAD_PX*2 + ROWS*CELL_PX + (ROWS-1)*GAP_PX;
     boardEl.style.width = w+'px';
     boardEl.style.height = h+'px';
     boardEl.style.aspectRatio='';
     tilesEl.style.gap = GAP_PX+'px';
+    document.getElementById('app').style.paddingBottom = footerHeight() + 'px';
   }
 
   const cellSizePx=()=>CELL_PX;
