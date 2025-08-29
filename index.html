@@ -303,9 +303,21 @@
   let lettersBag=[..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
   function setLetterWeights(weights){
     if(!weights){ return; }
-    const seq=[]; Object.keys(weights).forEach(k=>{ const n=Math.max(0, Math.floor(weights[k]||0)); for(let i=0;i<n;i++) seq.push(k.toUpperCase()); });
-    if(seq.length>=5) lettersBag=seq; // basic sanity: ensure not empty
+    const seq=[]; const scale=10; // scale percentages to counts
+    Object.keys(weights).forEach(k=>{
+      const v=parseFloat(weights[k]||0); if(v<=0) return;
+      const n=Math.max(1, Math.round(v*scale));
+      for(let i=0;i<n;i++) seq.push(String(k).toUpperCase());
+    });
+    if(seq.length>=5) lettersBag=seq;
   }
+
+  // Dynamic color weights (percentages). Supports: yellow, green, blue, purple, red
+  const COLOR_HEX={yellow:'#fcd34d', green:'#34d399', blue:'#60a5fa', purple:'#a78bfa', red:'#ef4444', booster:'#a87657'};
+  let colorWeightsMap={yellow:40, green:30, blue:20, purple:10};
+  function setColorWeights(map){ if(!map) return; colorWeightsMap={...colorWeightsMap, ...map}; }
+  function pickWeightedKey(map){ const entries=Object.entries(map).filter(([k,v])=>v>0); const total=entries.reduce((s,[,v])=>s+Number(v||0),0) || 1; let r=Math.random()*total; for(const [k,v] of entries){ r-=Number(v||0); if(r<=0) return k; } return entries[0]?.[0]||'yellow'; }
+  function pickColor(){ const key=pickWeightedKey(colorWeightsMap); return {key, color: (COLOR_HEX[key]||'#fcd34d')}; }
 
   const COLOR_WEIGHTS=[{key:'yellow',weight:40,color:'#fcd34d'},{key:'green',weight:30,color:'#34d399'},{key:'blue',weight:20,color:'#60a5fa'},{key:'purple',weight:10,color:'#a78bfa'}];
   function pickColor(){const total=COLOR_WEIGHTS.reduce((s,o)=>s+o.weight,0);let r=Math.random()*total;for(const o of COLOR_WEIGHTS){if((r-=o.weight)<=0) return {key:o.key,color:o.color}}return {key:'yellow',color:'#fcd34d'}}
@@ -620,7 +632,7 @@
   }
 
   // Level loader (from level_data)
-  function colorFromKey(key){ if(key==='yellow') return '#fcd34d'; if(key==='green') return '#34d399'; if(key==='blue') return '#60a5fa'; if(key==='purple') return '#a78bfa'; if(key==='booster') return '#a87657'; return '#fcd34d'; }
+  function colorFromKey(key){ if(COLOR_HEX[key]) return COLOR_HEX[key]; return '#fcd34d'; }
   async function loadLevelFromData(lvl, loopIfMissing){
     const path=relUrl(`level_data/level_${lvl}.json`);
     try{
@@ -652,11 +664,17 @@
     updateGoalsUI();
     // Weights
     if(data.letterWeights) setLetterWeights(data.letterWeights);
+    if(data.colorWeights) setColorWeights(data.colorWeights);
     // Grid
     grid=Array.from({length:ROWS*COLS},(_,i)=>{
       const cell=data.grid && data.grid[i]; if(!cell) return null;
       if(cell.type==='letter'){
-        const colorKey=cell.color||'yellow'; return {letter:String(cell.letter||'').toUpperCase(), colorKey, color:colorFromKey(colorKey), obstacle:null, frozen:false, power:null};
+        let letter=String(cell.letter||'');
+        let colorKey=cell.color||'yellow';
+        // placeholders: empty letter => random; color 'random' => weighted random
+        if(!letter){ letter=randLetter(); }
+        if(colorKey==='random'){ const c=pickColor(); colorKey=c.key; }
+        return {letter:letter.toUpperCase(), colorKey, color:colorFromKey(colorKey), obstacle:null, frozen:false, power:null};
       } else if(cell.type==='ice'){
         return {letter:null,colorKey:null,color:'#b6e0ff',obstacle:'ice',layers:Math.max(1,Number(cell.layers)||1),frozen:false,power:null};
       } else if(cell.type==='stone'){
@@ -666,7 +684,13 @@
       } else return null;
     });
     // Fill empty with letters
-    for(let i=0;i<grid.length;i++){ if(grid[i]==null) grid[i]=newTile(); }
+    for(let i=0;i<grid.length;i++){
+      if(grid[i]==null) { grid[i]=newTile(); continue; }
+      const t=grid[i]; if(t && !t.obstacle){
+        if(!t.letter){ t.letter=randLetter(); }
+        if(!t.colorKey || t.colorKey==='random'){ const cc=pickColor(); t.colorKey=cc.key; t.color=colorFromKey(t.colorKey); }
+      }
+    }
     return true;
   }
 
