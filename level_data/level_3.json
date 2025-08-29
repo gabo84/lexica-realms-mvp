@@ -38,22 +38,9 @@
       "color": "random"
     },
     {
-      "type": "ice",
-      "layers": 1
-    },
-    {
       "type": "letter",
       "letter": "",
       "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "ice",
-      "layers": 1
     },
     {
       "type": "letter",
@@ -126,22 +113,9 @@
       "color": "random"
     },
     {
-      "type": "ice",
-      "layers": 1
-    },
-    {
       "type": "letter",
       "letter": "",
       "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "ice",
-      "layers": 1
     },
     {
       "type": "letter",
@@ -172,6 +146,34 @@
       "type": "letter",
       "letter": "",
       "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "fire",
+      "stage": 1
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "fire",
+      "stage": 1
     },
     {
       "type": "letter",
@@ -183,9 +185,9 @@
     "red": 5,
     "blue": 0,
     "yellow": 10,
-    "green": 0,
+    "green": 10,
     "purple": 0,
-    "ice": 4,
+    "ice": 0,
     "fire": 0
   },
   "letterWeights": {
