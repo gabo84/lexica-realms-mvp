@@ -136,7 +136,7 @@
     "MUNDO",
     "AMOR"
   ],
-  "straightWordRatio": 0.35,
+  "straightWordRatio": 1,
   "minTotalWords": 25,
   "kidBand": "K-5",
   "prefixBiasStrength": 0.7,
