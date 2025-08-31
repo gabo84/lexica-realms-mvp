@@ -221,10 +221,16 @@
     "F": 2
   },
   "colorWeights": {
-    "red": 16,
-    "blue": 22,
-    "yellow": 26,
-    "green": 26,
-    "purple": 10
-  }
+    "red": 30,
+    "blue": 35,
+    "yellow": 35,
+    "green": 0,
+    "purple": 0
+  },
+  "seedWords": [],
+  "straightWordRatio": 0.35,
+  "minTotalWords": 25,
+  "kidBand": "K-5",
+  "prefixBiasStrength": 0.7,
+  "ngramBiasStrength": 0.5
 }
