@@ -1,10 +1,10 @@
 {
-  "cols": 6,
-  "rows": 6,
+  "cols": 5,
+  "rows": 5,
   "grid": [
     {
       "type": "letter",
-      "letter": "",
+      "letter": "C",
       "color": "random"
     },
     {
@@ -24,7 +24,57 @@
     },
     {
       "type": "letter",
+      "letter": "M",
+      "color": "random"
+    },
+    {
+      "type": "letter",
       "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "A",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "U",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "S",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "N",
       "color": "random"
     },
     {
@@ -44,142 +94,37 @@
     },
     {
       "type": "letter",
-      "letter": "",
+      "letter": "A",
       "color": "random"
     },
     {
       "type": "letter",
-      "letter": "",
+      "letter": "D",
       "color": "random"
     },
     {
       "type": "letter",
-      "letter": "",
+      "letter": "H",
       "color": "random"
     },
     {
       "type": "letter",
-      "letter": "",
+      "letter": "O",
       "color": "random"
     },
     {
       "type": "letter",
-      "letter": "",
+      "letter": "L",
       "color": "random"
     },
     {
       "type": "letter",
-      "letter": "",
+      "letter": "A",
       "color": "random"
     },
     {
       "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
+      "letter": "O",
       "color": "random"
     }
   ],
@@ -228,15 +173,8 @@
     "purple": 10
   },
   "lang": "es",
-  "seedWords": [
-    "CASA",
-    "MAMA",
-    "PAPA",
-    "HOLA",
-    "MUNDO",
-    "AMOR"
-  ],
-  "straightWordRatio": 1,
+  "seedWords": [],
+  "straightWordRatio": 0.7,
   "minTotalWords": 25,
   "kidBand": "K-5",
   "prefixBiasStrength": 0.7,
