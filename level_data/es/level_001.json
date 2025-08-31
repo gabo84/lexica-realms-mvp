@@ -1,7 +1,62 @@
 {
-  "cols": 5,
-  "rows": 5,
+  "cols": 6,
+  "rows": 6,
   "grid": [
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
     {
       "type": "letter",
       "letter": "",
