@@ -135,7 +135,7 @@
         </label>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Hint delay (s)
-          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="8" style="margin-left:auto;width:84px;">
+          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="15" style="margin-left:auto;width:84px;">
         </label>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Prefix bias
@@ -237,6 +237,24 @@
   const LOCAL_DICT_ES = 'data/spanish_words.ndjson';
   function relUrl(p){ try{ return new URL(p, location.href).toString(); }catch(_){ return p; } }
   const dictCache={en:null, es:null}, prefCache={en:null, es:null}, commonCache={en:null, es:null};
+  const bigramCache={en:null, es:null};
+  async function loadBigrams(lang){
+    if(bigramCache[lang]) return bigramCache[lang];
+    const path = relUrl(lang==='en'? 'data/bigrams_en.json':'data/bigrams_es.json');
+    try{
+      const r = await fetch(path, {cache:'no-store'});
+      if(!r.ok) throw new Error('no bigrams');
+      const obj = await r.json();
+      // Normalize keys to uppercase two-letter strings
+      const map = new Map();
+      Object.keys(obj||{}).forEach(k=>{
+        const key = String(k||'').toUpperCase();
+        const v = Number(obj[k]||0);
+        if(key.length===2 && !isNaN(v)) map.set(key, v);
+      });
+      bigramCache[lang]=map; return map;
+    }catch(_){ bigramCache[lang]=new Map(); return bigramCache[lang]; }
+  }
   var dictLoading=false;
   function normalizeWord(lang, w){
     var s=String(w||'').toUpperCase();
@@ -421,7 +439,7 @@
   let level=1, moves=20, grid=[], selection=[], selecting=false, selectingPointerId=null;
   // Generation configuration defaults (used by seed/refill; may be overridden by level JSON later)
   let genConfig={ straightWordRatio:0.35, minTotalWords:25, ngramBiasStrength:0.5, prefixBiasStrength:0.7, seedWords:[], kidBand:null };
-  let hintTimer=null; let HINT_DELAY_MS=8000; let currentHint=null;
+  let hintTimer=null; let HINT_DELAY_MS=15000; let currentHint=null;
   let debugMode=false, targeting=null, submitting=false;
   let verboseWordDebug=false;
   let inventory={breaker:5,row:5,col:5,rainbow:5};
@@ -591,12 +609,12 @@
 
   function startSelect(i){
     clearTimeout(hintTimer); if(submitting) return; const t=grid[i];
-    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || t.obstacle==='ice' || (t.power && t.power!=='rainbow')) return;
+    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || t.obstacle==='ice' || t.obstacle==='fire' || (t.power && t.power!=='rainbow')) return;
     selecting=true; selection=[i]; updateSelClasses();
   }
   function extendTo(i){
     if(!selecting) return; if(i<0) return; const t=grid[i];
-    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || t.obstacle==='ice' || (t.power && t.power!=='rainbow')) return;
+    if(!t || t.obstacle==='stone' || t.obstacle==='bomb' || t.obstacle==='ice' || t.obstacle==='fire' || (t.power && t.power!=='rainbow')) return;
     const last=selection[selection.length-1]; if(i===last) return;
     if(selection.length>=2 && i===selection[selection.length-2]){selection.pop(); updateSelClasses(); return;}
     const pos=selection.indexOf(i); if(pos!==-1){selection=selection.slice(0,pos+1); updateSelClasses(); return;}
@@ -665,14 +683,29 @@
     // Break adjacent ICE blockers -> convert to fresh letters and count towards ice goal
     const iceToHit=new Set(); const firesToRemove=new Set();
     selection.forEach(i=>{ const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ const nr=r+dr,nc=c+dc; if(dr===0&&dc===0) continue; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); const cell=grid[j]; if(!cell) continue; if(cell.obstacle==='ice') iceToHit.add(j); if(cell.obstacle==='fire') firesToRemove.add(j); if(cell.obstacle==='bomb'){ cell.state=(cell.state||0)+1; if(cell.state>=2) bombsToExplode.add(j); } }});
-    const stonesToRemove=new Set();
-    toRemove.forEach(i=>{const [r,c]=rc(i); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(inBounds(nr,nc)){ const j=idx(nr,nc); if(grid[j] && grid[j].obstacle==='stone') stonesToRemove.add(j); } }});
+    // Stones are immutable: do not mark stones adjacent to removal
     toRemove.forEach(i=>{const t=grid[i]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[i]=null;});
-    stonesToRemove.forEach(i=>grid[i]=null);
+    // Do not remove stones
     let iceBrokenCount=0, fireClearedCount=0;
     iceToHit.forEach(j=>{ const t=grid[j]; if(t.layers && t.layers>1){ t.layers--; } else { grid[j]=newTile(); iceBrokenCount++; } });
     firesToRemove.forEach(j=>{ grid[j]=null; fireClearedCount++; });
-    bombsToExplode.forEach(bi=>{const [r,c]=rc(bi); const affected=new Set([bi]); for(let rr=0; rr<ROWS; rr++) affected.add(idx(rr,c)); for(let cc=0; cc<COLS; cc++) affected.add(idx(r,cc)); affected.forEach(ai=>{const t=grid[ai]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null;});});
+    bombsToExplode.forEach(bi=>{
+      const [r,c]=rc(bi);
+      // Area 3x3 alrededor de la bomba
+      const affected=new Set();
+      for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+        const rr=r+dr, cc=c+dc; if(!inBounds(rr,cc)) continue; affected.add(idx(rr,cc));
+      }
+      // Expandir cadena si hay boosters de fila/columna dentro del área
+      const queue=[...affected]; const seen=new Set(affected);
+      while(queue.length){
+        const j=queue.pop(); const t=grid[j]; if(!t) continue;
+        if(t.power==='row'){ const [rr]=rc(j); for(let cc=0;cc<COLS;cc++){ const k=idx(rr,cc); if(!seen.has(k)){ seen.add(k); queue.push(k); } } }
+        else if(t.power==='col'){ const [,cc]=rc(j); for(let rr=0;rr<ROWS;rr++){ const k=idx(rr,cc); if(!seen.has(k)){ seen.add(k); queue.push(k); } } }
+      }
+      // Aplicar daños (respetar piedras)
+      seen.forEach(ai=>{ const t=grid[ai]; if(!t) return; if(t.obstacle==='stone') return; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[ai]=null; });
+    });
     if(newPower){
       const last=selection[selection.length-1]; let tIdx=last; if(grid[tIdx]!==null){ var arr=Array.from(toRemove); tIdx = (arr.length>0?arr[0]:last); }
       // Use a distinctive brown background for boosters
@@ -743,13 +776,13 @@
       showAnyHint();
     }, HINT_DELAY_MS);
   }
-  function showHintPath(path){ path.forEach((i,ord)=>{ const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('hint'); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
+  function showHintPath(path){ path.forEach((i,ord)=>{ const cell=grid[i]; if(!cell || cell.obstacle || (cell.power && cell.power!=='rainbow')) return; const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('hint'); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
   async function showAnyHint(){
     if(dictLoading) return;
     clearHint(); const {dict,pref}=await loadDictionary(currentLang);
-    const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:6; let found=null;
-    function dfs(path){ if(found) return; var word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return;} if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(found) return; }}
-    for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; }
+    const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:6; let found=null; const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); const MAX_WC=2;
+    function dfs(path, word, wc){ if(found) return; if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue; visited[j]=true; path.push(j); if(cell.power==='rainbow'){ if(wc<MAX_WC){ for(let k=0;k<A.length;k++){ const w2=word + A[k]; if(pref.has(w2)){ dfs(path, w2, wc+1); if(found) break; } } } } else if(!cell.power){ const ch=(cell.letter||'').toUpperCase(); const w2=word+ch; dfs(path, w2, wc); } path.pop(); visited[j]=false; if(found) return; }}
+    for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue; visited[i]=true; const startWord = (cell.power==='rainbow')? '': ((cell.letter||'').toUpperCase()); dfs([i], startWord, cell.power==='rainbow'?1:0); visited[i]=false; }
     if(found){ currentHint=found; showHintPath(found); }
   }
 
@@ -757,9 +790,10 @@
   function drawDebugPaths(list){ clearDebug(); const maxDraw=Math.min(list.length,80); for(let n=0;n<maxDraw;n++){ const p=list[n].path; for(let k=0;k<p.length;k++){ const el=boardEl.querySelector(`.tile[data-i='${p[k]}']`); if(el) el.classList.add('debug'); } } }
   async function findAllWordsOnBoard(){
     if(dictLoading) return [];
-    const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:7; const cap=isIOS?100:200;
-    function dfs(path){ const word=path.map(function(i){ return (grid[i]&&grid[i].letter)||''; }).join('').toUpperCase(); if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word:word, path:path.slice()}); if(results.length>cap) return; } if(path.length===maxLen) return; const last=path[path.length-1]; const _rc=rc(last); const r=_rc[0], c=_rc[1]; for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[j]=true; path.push(j); dfs(path); path.pop(); visited[j]=false; if(results.length>cap) return; } }
-    for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.power) continue; visited[i]=true; dfs([i]); visited[i]=false; if(results.length>cap) break; }
+    const {dict,pref}=await loadDictionary(currentLang); const results=[]; const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:7; const cap=isIOS?100:200; const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); const MAX_WC=1;
+    function dfs(path, word, wc){ if(results.length>cap) return; if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ results.push({word:word, path:path.slice()}); }
+      if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue; visited[j]=true; path.push(j); if(cell.power==='rainbow'){ if(wc<MAX_WC){ for(let k=0;k<A.length;k++){ const w2=word + A[k]; if(pref.has(w2)){ dfs(path, w2, wc+1); if(results.length>cap) break; } } } } else if(!cell.power){ const ch=(cell.letter||'').toUpperCase(); const w2=word+ch; dfs(path, w2, wc); } path.pop(); visited[j]=false; if(results.length>cap) return; } }
+    for(let i=0;i<ROWS*COLS;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue; visited[i]=true; const startWord=(cell.power==='rainbow')? '' : ((cell.letter||'').toUpperCase()); dfs([i], startWord, cell.power==='rainbow'?1:0); visited[i]=false; if(results.length>cap) break; }
     return results;
   }
   async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } if(dictLoading){ clearDebug(); toast('Loading dictionary…'); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
@@ -801,7 +835,7 @@
     seen.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
     setTimeout(()=>{
       const colorCount={yellow:0,green:0,blue:0,purple:0,red:0};
-      seen.forEach(j=>{ const t=grid[j]; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
+    seen.forEach(j=>{ const t=grid[j]; if(!t) return; if(t.obstacle==='stone') return; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
       if(grid[from]) grid[from]=null; // remove original booster tile to allow gravity/refill
       goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.purple=Math.max(0,(goals.purple||0)-(colorCount.purple||0)); goals.red=Math.max(0,(goals.red||0)-(colorCount.red||0));
       recountDynamicObjectives(); updateGoalsUI();
@@ -823,7 +857,10 @@
   function applyTargeting(target){
     if(!targeting) return; const {type,from,source}=targeting; const affected=new Set();
     if(from!=null && target===from){ toast(currentLang==='es'?'Elige otra pieza':'Pick a different tile'); return; }
-    if(type==='breaker'){ affected.add(target); }
+    if(type==='breaker'){
+      const ct=grid[target]; if(ct && ct.obstacle==='stone'){ toast(currentLang==='es'?'La roca no se puede romper':'Stone cannot be broken'); targeting=null; boardEl.classList.remove('targeting'); return; }
+      affected.add(target);
+    }
     else if(type==='row'){ const [r]=rc(target); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(type==='col'){ const [,c]=rc(target); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
     else if(type==='rainbow'){
@@ -960,10 +997,36 @@
   function placeWordAt(w, r,c, dr,dc){ for(let k=0;k<w.length;k++){ const rr=r+dr*k, cc=c+dc*k; const i=idx(rr,cc); if(!grid[i]) grid[i]={letter:w[k], colorKey:null, color:null, obstacle:null, frozen:false, power:null}; else grid[i].letter=w[k]; } }
   function pickSeedList(){ const desired = Math.max(2, Math.ceil((COLS*ROWS)/32)); let base = (genConfig.seedWords && genConfig.seedWords.length)? genConfig.seedWords.slice(0) : []; if(base.length===0 && commonCache[currentLang]){ const pool = commonCache[currentLang].filter(x=>x.len>=3 && x.len<=6 && (!genConfig.kidBand || x.g===genConfig.kidBand)); for(let i=0;i<pool.length && base.length<desired;i++) base.push(pool[i].w); } return base.slice(0, Math.max(2, desired)); }
   function seedBoard(){ const words = pickSeedList(); if(!words.length) return; const straights = Math.ceil(words.length * (genConfig.straightWordRatio||0.35)); const dirs = candidateDirections(); function tryPlace(w){ w = normalizeWord(currentLang,w); for(let tries=0; tries<80; tries++){ const [dr,dc] = dirs[Math.floor(Math.random()*dirs.length)]; const r = Math.floor(Math.random()*ROWS), c=Math.floor(Math.random()*COLS); if(canPlaceWordAt(w,r,c,dr,dc)){ placeWordAt(w,r,c,dr,dc); return true; } } return false; } for(let i=0;i<straights && i<words.length;i++){ tryPlace(words[i]); } for(let i=straights;i<words.length;i++){ tryPlace(words[i]); } }
-  function refillSmart(){ const pickSmartLetter = (r,c)=>{ const cand = new Set(); for(let t=0;t<3;t++) cand.add(randLetter()); vowels.split('').forEach(v=>{ if(Math.random()<0.05) cand.add(v); }); const list = Array.from(cand); let best=list[0], bestScore=-1; const pref = prefCache[currentLang] || prefixes; for(const L of list){ let s=0; const neighbors=[[r-1,c],[r,c-1],[r,c+1],[r+1,c]]; for(const [nr,nc] of neighbors){ if(!inBounds(nr,nc)) continue; const t=grid[idx(nr,nc)]; if(t && t.letter){ const seq = (nr===r && nc===c-1)? (t.letter+L) : (L+t.letter); const pre=normalizeWord(currentLang, seq); if(pref.has(pre)) s+= (genConfig.prefixBiasStrength||0.7); } } if(inBounds(r,c-1)&&inBounds(r,c-2)){ const t1=grid[idx(r,c-1)], t2=grid[idx(r,c-2)]; if(t1&&t2&&t1.letter===L&&t2.letter===L) s-=0.4; } if(s>bestScore){ best=L; bestScore=s; } } return best || randLetter(); }; for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null){ const L=pickSmartLetter(r,c); const col=pickColor(); grid[i]={letter:L, colorKey:col.key, color:col.color, obstacle:null, frozen:false, power:null}; } } }
+  function refillSmart(){
+    const pickSmartLetter = (r,c)=>{
+      const cand = new Set(); for(let t=0;t<3;t++) cand.add(randLetter()); vowels.split('').forEach(v=>{ if(Math.random()<0.05) cand.add(v); });
+      const list = Array.from(cand);
+      let best=list[0], bestScore=-1;
+      const pref = prefCache[currentLang] || prefixes; // fallback minimal
+      const bigr = bigramCache[currentLang] || new Map();
+      for(const L of list){
+        let s=0;
+        // Prefix bonus with neighbors (left/right/up/down)
+        const neighbors=[[r-1,c],[r,c-1],[r,c+1],[r+1,c]];
+        for(const [nr,nc] of neighbors){ if(!inBounds(nr,nc)) continue; const t=grid[idx(nr,nc)]; if(t && t.letter){ const seq = (nr===r && nc===c-1)? (t.letter+L) : (L+t.letter); const pre=normalizeWord(currentLang, seq); if(pref.has(pre)) s+= (genConfig.prefixBiasStrength||0.7); } }
+        // Bigram probabilities (left->L, up->L, L->right, L->down)
+        const left = inBounds(r,c-1)? grid[idx(r,c-1)] : null; if(left && left.letter){ const key=(left.letter+L).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
+        const up = inBounds(r-1,c)? grid[idx(r-1,c)] : null; if(up && up.letter){ const key=(up.letter+L).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
+        const right = inBounds(r,c+1)? grid[idx(r,c+1)] : null; if(right && right.letter){ const key=(L+(right.letter)).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
+        const down = inBounds(r+1,c)? grid[idx(r+1,c)] : null; if(down && down.letter){ const key=(L+(down.letter)).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
+        // Light penalty for repeating exact 3-in-a-row horizontally
+        if(inBounds(r,c-1)&&inBounds(r,c-2)){ const t1=grid[idx(r,c-1)], t2=grid[idx(r,c-2)]; if(t1&&t2&&t1.letter===L&&t2.letter===L) s-=0.4; }
+        if(s>bestScore){ best=L; bestScore=s; }
+      }
+      return best || randLetter();
+    };
+    for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null){ const L=pickSmartLetter(r,c); const col=pickColor(); grid[i]={letter:L, colorKey:col.key, color:col.color, obstacle:null, frozen:false, power:null}; } }
+  }
   function colorFromKey(key){ if(COLOR_HEX[key]) return COLOR_HEX[key]; return '#fcd34d'; }
   async function loadLevelFromData(lvl, loopIfMissing){
-    const path=relUrl(`level_data/level_${lvl}.json`);
+    // Try language-scoped path first, then fallback to legacy root
+    const pathLang=relUrl(`level_data/${currentLang}/level_${lvl}.json`);
+    const pathLegacy=relUrl(`level_data/level_${lvl}.json`);
     try{
       if(IS_FILE){
         console.warn('file:// detected — trying embedded level_'+lvl);
@@ -972,8 +1035,8 @@
         const data=JSON.parse(el.textContent||'{}');
         return applyLevelData(data);
       }
-      const r=await fetch(path,{cache:'no-store'});
-      if(!r.ok){ if(loopIfMissing) return false; else return false; }
+      let r=await fetch(pathLang,{cache:'no-store'});
+      if(!r.ok){ r=await fetch(pathLegacy,{cache:'no-store'}); if(!r.ok){ if(loopIfMissing) return false; else return false; } }
       const data=await r.json();
       return applyLevelData(data);
     }catch(e){ console.warn('loadLevelFromData failed', e); return false; }
@@ -1042,7 +1105,7 @@
     inventory={breaker:5,row:5,col:5,rainbow:5}; updateInventoryUI();
     makeEmpty(); const ok=await loadLevelFromData(1,false); if(!ok){ setProceduralGoals(60); placeInitial(); } render(); updateGoalsUI(); applyLanguageToUI(); maybeShowTutorial();
     // load dictionaries for current language early (non-blocking for UI)
-    loadDictionary(currentLang).then(function(){ scheduleHint(); if(debugMode) refreshDebugOverlay(); });
+    loadDictionary(currentLang).then(function(){ loadBigrams(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); });
     // No sprites: boosters use emojis now
     window.addEventListener('resize', ()=>{ ensureBoardSize(); render(); });
     setTimeout(()=>{ ensureBoardSize(); render(); }, 0);
