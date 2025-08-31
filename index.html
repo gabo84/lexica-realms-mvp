@@ -135,7 +135,7 @@
         </label>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Hint delay (s)
-          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="15" style="margin-left:auto;width:84px;">
+          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="12" style="margin-left:auto;width:84px;">
         </label>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Prefix bias
@@ -404,7 +404,7 @@
   let level=1, moves=20, grid=[], selection=[], selecting=false, selectingPointerId=null;
   // Generation configuration defaults (used by seed/refill; may be overridden by level JSON later)
   let genConfig={ straightWordRatio:0.35, minTotalWords:25, ngramBiasStrength:0.5, prefixBiasStrength:0.7, seedWords:[], kidBand:null };
-  let hintTimer=null; let HINT_DELAY_MS=15000; let currentHint=null;
+  let hintTimer=null; let HINT_DELAY_MS=12000; let currentHint=null;
   let debugMode=false, targeting=null, submitting=false;
   let verboseWordDebug=false;
   let inventory={breaker:5,row:5,col:5,rainbow:5};
@@ -744,11 +744,91 @@
   function showHintPath(path){ path.forEach((i,ord)=>{ const cell=grid[i]; if(!cell || cell.obstacle || (cell.power && cell.power!=='rainbow')) return; const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('hint'); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
   async function showAnyHint(){
     if(dictLoading) return;
-    clearHint(); const {dict,pref}=await loadDictionary(currentLang);
-    const visited=new Array(ROWS*COLS).fill(false); const maxLen=isIOS?5:6; let found=null; const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); const MAX_WC=2;
-    function dfs(path, word, wc){ if(found) return; if(!pref.has(word)) return; if(word.length>=3 && dict.has(word)){ found=path.slice(); return; } if(path.length===maxLen) return; const last=path[path.length-1]; const [r,c]=rc(last); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0) continue; const nr=r+dr,nc=c+dc; if(!inBounds(nr,nc)) continue; const j=idx(nr,nc); if(visited[j]) continue; const cell=grid[j]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue; visited[j]=true; path.push(j); if(cell.power==='rainbow'){ if(wc<MAX_WC){ for(let k=0;k<A.length;k++){ const w2=word + A[k]; if(pref.has(w2)){ dfs(path, w2, wc+1); if(found) break; } } } } else if(!cell.power){ const ch=(cell.letter||'').toUpperCase(); const w2=word+ch; dfs(path, w2, wc); } path.pop(); visited[j]=false; if(found) return; }}
-    for(let i=0;i<ROWS*COLS && !found;i++){ const cell=grid[i]; if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue; visited[i]=true; const startWord = (cell.power==='rainbow')? '': ((cell.letter||'').toUpperCase()); dfs([i], startWord, cell.power==='rainbow'?1:0); visited[i]=false; }
-    if(found){ currentHint=found; showHintPath(found); }
+    clearHint();
+
+    const {dict,pref} = await loadDictionary(currentLang);
+
+    // Build and shuffle list of starting indices
+    const idxs = Array.from({length: ROWS*COLS}, (_,i)=>i);
+    for (let i=idxs.length-1; i>0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+    }
+
+    // Small helper to shuffle neighbors / alphabet
+    const shuffle = (arr)=>{ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+
+    const visited = new Array(ROWS*COLS).fill(false);
+    const maxLen = isIOS ? 5 : 6;
+    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const MAX_WC = 2;
+    let found = null;
+
+    function dfs(path, word, wc){
+      if(found) return;
+      if(!pref.has(word)) return;
+      if(word.length>=3 && dict.has(word)){ found = path.slice(); return; }
+      if(path.length === maxLen) return;
+
+      const last = path[path.length-1];
+      const [r,c] = rc(last);
+
+      // Randomize neighbors each expansion
+      const neighbors = shuffle([
+        [-1,-1],[-1,0],[-1,1],
+        [0,-1],        [0,1],
+        [1,-1],[1,0],[1,1]
+      ]);
+
+      for(const [dr,dc] of neighbors){
+        if(found) break;
+        const nr=r+dr, nc=c+dc;
+        if(!inBounds(nr,nc)) continue;
+        const j = idx(nr,nc);
+        if(visited[j]) continue;
+        const cell = grid[j];
+        if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue;
+
+        visited[j] = true;
+        path.push(j);
+
+        if(cell.power==='rainbow'){
+          if(wc < MAX_WC){
+            const letters = shuffle(A.slice());
+            for(let k=0;k<letters.length;k++){
+              const w2 = word + letters[k];
+              if(pref.has(w2)){
+                dfs(path, w2, wc+1);
+                if(found) break;
+              }
+            }
+          }
+        } else if(!cell.power){
+          const ch = (cell.letter||'').toUpperCase();
+          const w2 = word + ch;
+          dfs(path, w2, wc);
+        }
+
+        path.pop();
+        visited[j] = false;
+      }
+    }
+
+    // Start DFS from randomized order
+    for(let t=0; t<idxs.length && !found; t++){
+      const i = idxs[t];
+      const cell = grid[i];
+      if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue;
+      visited[i] = true;
+      const startWord = (cell.power==='rainbow') ? '' : ((cell.letter||'').toUpperCase());
+      dfs([i], startWord, cell.power==='rainbow' ? 1 : 0);
+      visited[i] = false;
+    }
+
+    if(found){
+      currentHint = found;
+      showHintPath(found);
+    }
   }
 
   function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
@@ -1077,7 +1157,19 @@
     setTimeout(()=>{ ensureBoardSize(); render(); }, 0);
     // set selector value + listener
     const langSelect=document.getElementById('langSelect');
-    if(langSelect){ langSelect.value=currentLang; langSelect.addEventListener('change', async function(){ currentLang=langSelect.value; try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){ } applyLanguageToUI(); await loadDictionary(currentLang); scheduleHint(); if(debugMode) refreshDebugOverlay(); }); }
+    if(langSelect){
+      langSelect.value=currentLang;
+      langSelect.addEventListener('change', async function(){
+        currentLang=langSelect.value;
+        try{ localStorage.setItem('lexica_lang', currentLang); }catch(_){}
+        applyLanguageToUI();
+        clearHint();            // avoid stale hints from previous language
+        clearSelection();       // clear any current selection
+        await loadDictionary(currentLang);
+        scheduleHint();
+        if(debugMode) refreshDebugOverlay();
+      });
+    }
   }
   init();
 })();
