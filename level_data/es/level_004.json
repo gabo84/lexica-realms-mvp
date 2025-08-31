@@ -1,0 +1,213 @@
+{
+  "cols": 6,
+  "rows": 6,
+  "grid": [
+    null,
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "O",
+      "color": "random"
+    },
+    null,
+    {
+      "type": "letter",
+      "letter": "A",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "G",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "R",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "Z",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "A",
+      "color": "random"
+    },
+    {
+      "type": "stone"
+    },
+    {
+      "type": "stone"
+    },
+    {
+      "type": "letter",
+      "letter": "B",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "U",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "T",
+      "color": "random"
+    },
+    {
+      "type": "stone"
+    },
+    {
+      "type": "stone"
+    },
+    {
+      "type": "letter",
+      "letter": "I",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "L",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "O",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "L",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    null,
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    null
+  ],
+  "objectives": {
+    "red": 5,
+    "blue": 5,
+    "yellow": 5,
+    "green": 0,
+    "purple": 0,
+    "ice": 8,
+    "fire": 0
+  },
+  "letterWeights": {
+    "E": 12,
+    "A": 9,
+    "O": 8,
+    "S": 7,
+    "I": 6,
+    "N": 6.5,
+    "L": 6.5,
+    "R": 6,
+    "U": 5,
+    "D": 4,
+    "T": 4,
+    "C": 4,
+    "P": 3,
+    "M": 3,
+    "Y": 1,
+    "B": 2,
+    "G": 2,
+    "H": 2,
+    "V": 2,
+    "J": 1,
+    "K": 1,
+    "Q": 1,
+    "W": 1,
+    "X": 0.5,
+    "Z": 0.5,
+    "F": 2
+  },
+  "colorWeights": {
+    "red": 16,
+    "blue": 22,
+    "yellow": 26,
+    "green": 26,
+    "purple": 10
+  },
+  "lang": "es",
+  "seedWords": [],
+  "straightWordRatio": 0.7,
+  "minTotalWords": 25,
+  "kidBand": "K-5",
+  "prefixBiasStrength": 0.7,
+  "ngramBiasStrength": 0.5
+}
