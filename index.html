@@ -42,7 +42,8 @@
   .debug-menu .menu-item.primary{background:var(--blue); color:#fff;}
 
   /* Board */
-  #board{width:92vw; max-width:420px; aspect-ratio:8/10; margin:12px auto; padding:12px; background:#f4f6f9; border-radius:14px; box-shadow:0 10px 30px var(--shadow); position:relative;}
+  #board{width:92vw; max-width:420px; aspect-ratio:8/10; margin:auto; padding:12px; background:#f4f6f9; border-radius:14px; box-shadow:0 10px 30px var(--shadow); position:relative; display:flex; align-items:center; justify-content:center;}
+  #board-container{flex:1; display:flex; align-items:center; justify-content:center;}
   #tiles{position:absolute; inset:0; display:grid; grid-template-columns:repeat(var(--cols,8),1fr); grid-template-rows:repeat(var(--rows,10),1fr); gap:12px;}
 
   /* Tiles */
@@ -154,7 +155,9 @@
     </div>
   </header>
 
-  <div id="board" aria-label="Game board"><div id="tiles"></div></div>
+  <div id="board-container">
+    <div id="board" aria-label="Game board"><div id="tiles"></div></div>
+  </div>
   
   <div id="footer"><div class="inner">
   <div id="inventory">
