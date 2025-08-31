@@ -236,7 +236,7 @@
   const LOCAL_DICT_EN = 'data/english_words.ndjson';
   const LOCAL_DICT_ES = 'data/spanish_words.ndjson';
   function relUrl(p){ try{ return new URL(p, location.href).toString(); }catch(_){ return p; } }
-  const dictCache={en:null, es:null}, prefCache={en:null, es:null};
+  const dictCache={en:null, es:null}, prefCache={en:null, es:null}, commonCache={en:null, es:null};
   var dictLoading=false;
   function normalizeWord(lang, w){
     var s=String(w||'').toUpperCase();
@@ -419,6 +419,8 @@
   const closeTutorialBtn=document.getElementById('closeTutorial');
 
   let level=1, moves=20, grid=[], selection=[], selecting=false, selectingPointerId=null;
+  // Generation configuration defaults (used by seed/refill; may be overridden by level JSON later)
+  let genConfig={ straightWordRatio:0.35, minTotalWords:25, ngramBiasStrength:0.5, prefixBiasStrength:0.7, seedWords:[], kidBand:null };
   let hintTimer=null; let HINT_DELAY_MS=8000; let currentHint=null;
   let debugMode=false, targeting=null, submitting=false;
   let verboseWordDebug=false;
@@ -953,8 +955,6 @@
   }
 
   // Level loader (from level_data)
-  // Generation configuration defaults (overrideable via level JSON)
-  let genConfig={ straightWordRatio:0.35, minTotalWords:25, ngramBiasStrength:0.5, prefixBiasStrength:0.7, seedWords:[], kidBand:null };
   function candidateDirections(){ return [ [0,1], [1,0], [1,1], [1,-1] ]; }
   function canPlaceWordAt(w, r,c, dr,dc){ if(!w || w.length<3) return false; for(let k=0;k<w.length;k++){ const rr=r+dr*k, cc=c+dc*k; if(!inBounds(rr,cc)) return false; const i=idx(rr,cc); const t=grid[i]; if(t && (t.obstacle || (t.letter && t.letter!==w[k]))) return false; } return true; }
   function placeWordAt(w, r,c, dr,dc){ for(let k=0;k<w.length;k++){ const rr=r+dr*k, cc=c+dc*k; const i=idx(rr,cc); if(!grid[i]) grid[i]={letter:w[k], colorKey:null, color:null, obstacle:null, frozen:false, power:null}; else grid[i].letter=w[k]; } }
