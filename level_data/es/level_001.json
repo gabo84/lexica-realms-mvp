@@ -1,7 +1,52 @@
 {
-  "cols": 4,
-  "rows": 4,
+  "cols": 5,
+  "rows": 5,
   "grid": [
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
     {
       "type": "letter",
       "letter": "",
