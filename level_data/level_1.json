@@ -184,7 +184,7 @@
     }
   ],
   "objectives": {
-    "red": 0,
+    "red": 5,
     "blue": 5,
     "yellow": 5,
     "green": 0,
@@ -221,10 +221,10 @@
     "F": 2
   },
   "colorWeights": {
-    "red": 10,
-    "blue": 20,
-    "yellow": 30,
-    "green": 30,
+    "red": 16,
+    "blue": 22,
+    "yellow": 26,
+    "green": 26,
     "purple": 10
   }
 }
