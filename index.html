@@ -231,10 +231,9 @@
       lostTitle:'Perdiste', plus5:'+5 movimientos', loseBtn:'Perder' }
   };
 
-  const DICT_URL_EN = 'https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt';
-  const DICT_URL_ES = 'https://raw.githubusercontent.com/words/an-array-of-spanish-words/master/index.json';
-  const LOCAL_DICT_EN = 'data/english_words.ndjson';
-  const LOCAL_DICT_ES = 'data/spanish_words.ndjson';
+  // Always use local NDJSON dictionaries
+  const LOCAL_DICT_EN = 'data/words_en.ndjson';
+  const LOCAL_DICT_ES = 'data/words_es.ndjson';
   function relUrl(p){ try{ return new URL(p, location.href).toString(); }catch(_){ return p; } }
   const dictCache={en:null, es:null}, prefCache={en:null, es:null}, commonCache={en:null, es:null};
   const bigramCache={en:null, es:null};
@@ -331,45 +330,11 @@
       }
       var opts = isIOS ? {cap:50000, maxLen:12, prefixDepth:12, batch:4000} : {cap:Infinity, maxLen:12, prefixDepth:12, batch:12000};
       if(lang==='en'){
-        var words;
-        try{
-          // 1) Try local NDJSON (preferred)
-          words = await loadNDJSONWords(LOCAL_DICT_EN);
-          if(!words || words.length===0) throw new Error('empty ndjson en');
-        }catch(_ndjsonErr){
-          try{
-            // 2) Fallback to local TXT (legacy)
-            const rLocal=await fetch(relUrl('data/english_words.txt'), {cache:'no-store'});
-            const txtL=await rLocal.text();
-            words=txtL.split(/\r?\n/).filter(function(w){return w;});
-          }catch(_txtErr){
-            // 3) Fallback to remote repo
-            const r=await fetch(DICT_URL_EN, {mode:'cors'});
-            const txt=await r.text();
-            words=txt.split(/\r?\n/).filter(function(w){return w;});
-          }
-        }
+        const words = await loadNDJSONWords(LOCAL_DICT_EN);
         const built=await buildSetsBatched(words, opts);
         dictCache.en=built.dict; prefCache.en=built.pref; dictLoading=false; toast((STRINGS[currentLang]||STRINGS.en).dictReady); return {dict:built.dict,pref:built.pref};
       }else{
-        var wordsES;
-        try{
-          // 1) Try local NDJSON (preferred)
-          wordsES = await loadNDJSONWords(LOCAL_DICT_ES);
-          if(!wordsES || wordsES.length===0) throw new Error('empty ndjson es');
-        }catch(_ndjsonErr2){
-          try{
-            // 2) Fallback to local JSON array (legacy)
-            const rLocal=await fetch(relUrl('data/spanish_words.json'), {cache:'no-store'});
-            const arrL=await rLocal.json();
-            wordsES=arrL;
-          }catch(_jsonErr){
-            // 3) Fallback to remote repo
-            const r=await fetch(DICT_URL_ES, {mode:'cors'});
-            const arr=await r.json();
-            wordsES=arr;
-          }
-        }
+        let wordsES = await loadNDJSONWords(LOCAL_DICT_ES);
         // Filter Spanish exclusions
         wordsES = wordsES.filter(w=>!EXCLUDE_ES.has(normalizeWord('es', String(w).toUpperCase())));
         const built=await buildSetsBatched(wordsES, opts);
@@ -1023,10 +988,11 @@
     for(let c=0;c<COLS;c++) for(let r=0;r<ROWS;r++){ const i=idx(r,c); if(grid[i]===null){ const L=pickSmartLetter(r,c); const col=pickColor(); grid[i]={letter:L, colorKey:col.key, color:col.color, obstacle:null, frozen:false, power:null}; } }
   }
   function colorFromKey(key){ if(COLOR_HEX[key]) return COLOR_HEX[key]; return '#fcd34d'; }
+  function levelFileName(n){ const s=String(n); return 'level_'+ s.padStart(3,'0') + '.json'; }
   async function loadLevelFromData(lvl, loopIfMissing){
     // Try language-scoped path first, then fallback to legacy root
-    const pathLang=relUrl(`level_data/${currentLang}/level_${lvl}.json`);
-    const pathLegacy=relUrl(`level_data/level_${lvl}.json`);
+    const pathLang=relUrl(`level_data/${currentLang}/${levelFileName(lvl)}`);
+    const pathLegacy=relUrl(`level_data/${levelFileName(lvl)}`);
     try{
       if(IS_FILE){
         console.warn('file:// detected — trying embedded level_'+lvl);

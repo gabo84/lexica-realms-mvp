@@ -230,7 +230,7 @@ let weights=normalizeCountsToPercent(defaultWeights); // letter %
         ngramBiasStrength: Number(document.getElementById('ngramBias').value||0.5)
       };
       const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-      const filename=`level_${COLS}x${ROWS}.json`;
+      const filename=`level_001.json`;
       if(window.showSaveFilePicker){
         try{
           const handle=await window.showSaveFilePicker({ suggestedName: filename, types:[{description:'Level JSON', accept:{'application/json':['.json']}}] });
