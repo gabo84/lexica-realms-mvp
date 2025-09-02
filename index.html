@@ -39,9 +39,9 @@
   /* Debug modal overlay */
   #debugMenu{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:40;}
   #debugMenu.show{display:flex;}
-  #debugMenu .panel{width:92vw; max-width:560px; max-height:80vh; background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.35); display:flex; flex-direction:column;}
+  #debugMenu .panel{width:92vw; max-width:560px; max-height:calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.35); display:flex; flex-direction:column;}
   #debugMenu .panel .header{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #eee;}
-  #debugMenu .panel .content{padding:10px 14px; overflow:auto;}
+  #debugMenu .panel .content{padding:10px 14px; overflow:auto; flex:1; min-height:0; -webkit-overflow-scrolling:touch;}
   #debugMenu .panel .footer{display:flex; gap:8px; justify-content:flex-end; padding:10px 14px; border-top:1px solid #eee;}
   #debugMenu .menu-item{display:block; width:100%; text-align:left; border:none; background:#fff; padding:10px 12px; border-radius:10px; font-weight:700; box-shadow:0 2px 6px var(--shadow); margin:6px 0;}
   #debugMenu .menu-item.primary{background:var(--blue); color:#fff;}
