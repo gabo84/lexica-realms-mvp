@@ -45,6 +45,14 @@
   #debugMenu .panel .content{padding:10px 14px; overflow:auto; flex:1; min-height:0; -webkit-overflow-scrolling:touch;}
   #debugMenu .panel .footer{position:sticky; bottom:0; background:#fff; z-index:1; display:flex; gap:8px; justify-content:flex-end; padding:10px 14px; border-top:1px solid #eee; border-bottom-left-radius:14px; border-bottom-right-radius:14px;}
   body.modal-open{ overflow:hidden; }
+  /* Hide footer (boosters and current word) when debug modal is open */
+  body.modal-open #footer{ opacity:.0; pointer-events:none; transition:opacity .15s ease; }
+  /* Compact 2‑column grid for action buttons to reduce height */
+  #debugMenu .actions-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+  #debugMenu .actions-grid .menu-item{ padding:8px 10px; text-align:center; }
+  /* Inline hints row */
+  #debugMenu .hints-row{ display:grid; grid-template-columns: 1.2fr .8fr .8fr; gap:8px; align-items:center; }
+  #debugMenu .menu-item.small{ padding:6px 8px; }
   #debugMenu .menu-item{display:block; width:100%; text-align:left; border:none; background:#fff; padding:10px 12px; border-radius:10px; font-weight:700; box-shadow:0 2px 6px var(--shadow); margin:6px 0;}
   #debugMenu .menu-item.primary{background:var(--blue); color:#fff;}
 
@@ -153,18 +161,20 @@
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="wordDebugChk" /> Verbose word debug
         </label>
-        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
-          Hint delay (s)
-          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="15" style="margin-left:auto;width:84px;">
-        </label>
-        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
-          Hints on/off
-          <input type="checkbox" id="hintsEnabledChk" checked style="margin-left:auto;">
-        </label>
-        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
-          Additive hints
-          <input type="checkbox" id="additiveHintsChk" style="margin-left:auto;">
-        </label>
+            <div class="hints-row">
+              <label class="menu-item small" style="display:flex;align-items:center;gap:8px;">
+                Hint delay (s)
+                <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="15" style="margin-left:auto;width:72px;">
+              </label>
+              <label class="menu-item small" style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+                Hints on/off
+                <input type="checkbox" id="hintsEnabledChk">
+              </label>
+              <label class="menu-item small" style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+                Additive
+                <input type="checkbox" id="additiveHintsChk">
+              </label>
+            </div>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Multi-hint gap (ms)
           <input type="number" id="multiHintDelayInput" min="200" max="5000" step="100" value="1000" style="margin-left:auto;width:84px;">
@@ -177,11 +187,13 @@
           N‑gram bias
           <input type="range" id="ngramBiasSlider" min="0" max="1" step="0.05" style="margin-left:auto;width:120px;">
         </label>
-        <button class="menu-item" id="debugToggleOverlay">Toggle overlay</button>
-        <button class="menu-item" id="shuffleBtn">Shuffle</button>
-        <button class="menu-item" id="endTurnBtn">End Turn</button>
-        <button class="menu-item" id="winNowBtn">Win Level</button>
-        <button class="menu-item" id="loseNowBtn">Lose Now</button>
+            <div class="actions-grid">
+              <button class="menu-item" id="debugToggleOverlay">Toggle overlay</button>
+              <button class="menu-item" id="shuffleBtn">Shuffle</button>
+              <button class="menu-item" id="endTurnBtn">End Turn</button>
+              <button class="menu-item" id="winNowBtn">Win Level</button>
+              <button class="menu-item" id="loseNowBtn">Lose Now</button>
+            </div>
           </div>
           <div class="footer"><button id="debugCancel" class="debug-badge" style="background:#9ca3af">Cancel</button><button id="debugAccept" class="debug-badge" style="background:#10b981">Apply</button></div>
         </div>
@@ -237,10 +249,36 @@
 </footer>
 
 <!-- Optional embedded assets for file:// debugging. Paste your JSON/word lists here. -->
-<script type="application/json" id="embedded_level_1">{ 
-  "cols": 8, "rows": 10,
-  "objectives": {"yellow":20,"green":20,"blue":20,"ice":0,"fire":0},
-  "grid": []
+<script type="application/json" id="embedded_level_1">{
+  "cols": 4,
+  "rows": 4,
+  "grid": [
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"},
+    {"type":"letter","letter":"","color":"random"}
+  ],
+  "objectives": {"red":5,"blue":5,"yellow":5,"green":0,"purple":0,"ice":0,"fire":0},
+  "letterWeights": {"E":12,"A":9,"O":8,"S":7,"I":6,"N":6.5,"L":6.5,"R":6,"U":5,"D":4,"T":4,"C":4,"P":3,"M":3,"Y":1,"B":2,"G":2,"H":2,"V":2,"J":1,"K":1,"Q":1,"W":1,"X":0.5,"Z":0.5,"F":2},
+  "colorWeights": {"red":16,"blue":22,"yellow":26,"green":26,"purple":10},
+  "seedWords": ["CASA","MAMA","PAPA","HOLA","MUNDO","AMOR"],
+  "straightWordRatio": 0.35,
+  "minTotalWords": 25,
+  "kidBand": "K-5",
+  "prefixBiasStrength": 0.7,
+  "ngramBiasStrength": 0.5
 }</script>
 <script type="application/json" id="embedded_level_2">{ 
   "cols": 8, "rows": 10,
@@ -1075,16 +1113,20 @@
     try{
       if(IS_FILE){
         console.warn('file:// detected — trying embedded level_'+lvl);
-        const el=document.getElementById('embedded_level_'+lvl);
+        let el=document.getElementById('embedded_level_'+lvl);
+        if(!el) el=document.getElementById('embedded_level_1');
         if(!el) return false;
         const data=JSON.parse(el.textContent||'{}');
         return applyLevelData(data);
       }
       let r=await fetch(pathLang,{cache:'no-store'});
-      if(!r.ok){ r=await fetch(pathLegacy,{cache:'no-store'}); if(!r.ok){ if(loopIfMissing) return false; else return false; } }
-      const data=await r.json();
-      return applyLevelData(data);
-    }catch(e){ console.warn('loadLevelFromData failed', e); return false; }
+      if(!r.ok){ r=await fetch(pathLegacy,{cache:'no-store'}); }
+      if(r && r.ok){ const data=await r.json(); return applyLevelData(data); }
+      // Fallback to embedded if fetch fails
+      let el=document.getElementById('embedded_level_'+lvl) || document.getElementById('embedded_level_1');
+      if(el){ const data=JSON.parse(el.textContent||'{}'); return applyLevelData(data); }
+      return false;
+    }catch(e){ console.warn('loadLevelFromData failed', e); const el=document.getElementById('embedded_level_'+lvl) || document.getElementById('embedded_level_1'); if(el){ const data=JSON.parse(el.textContent||'{}'); return applyLevelData(data); } return false; }
   }
   function applyLevelData(data){
     // Size
