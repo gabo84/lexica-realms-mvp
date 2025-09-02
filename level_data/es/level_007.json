@@ -1,0 +1,168 @@
+{
+  "cols": 5,
+  "rows": 5,
+  "grid": [
+    null,
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    null,
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "stone"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    null,
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "ice",
+      "layers": 3
+    },
+    null
+  ],
+  "objectives": {
+    "red": 5,
+    "blue": 5,
+    "yellow": 5,
+    "green": 0,
+    "purple": 0,
+    "ice": 24,
+    "fire": 0
+  },
+  "letterWeights": {
+    "E": 11,
+    "A": 9,
+    "O": 8,
+    "S": 7,
+    "I": 6,
+    "N": 6.5,
+    "L": 6.5,
+    "R": 6,
+    "U": 5,
+    "D": 4,
+    "T": 4,
+    "C": 4,
+    "P": 4,
+    "M": 3,
+    "Y": 1,
+    "B": 2,
+    "G": 2,
+    "H": 2,
+    "V": 2,
+    "J": 1,
+    "K": 1,
+    "Q": 1,
+    "W": 1,
+    "X": 0.5,
+    "Z": 0.5,
+    "F": 2
+  },
+  "colorWeights": {
+    "red": 10,
+    "blue": 20,
+    "yellow": 30,
+    "green": 30,
+    "purple": 10
+  },
+  "lang": "es",
+  "seedWords": [
+    "CASA",
+    "MUERTE",
+    "NARANJA",
+    "ROJO",
+    "NEGRO",
+    "MUNDO",
+    "HOLA",
+    "LINDO",
+    "BELLEZA",
+    "CANCION",
+    "COMIDA"
+  ],
+  "straightWordRatio": 0.7,
+  "minTotalWords": 10,
+  "kidBand": "K-5",
+  "prefixBiasStrength": 0.7,
+  "ngramBiasStrength": 0.5
+}
