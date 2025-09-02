@@ -85,7 +85,10 @@
   .tile.power-emoji{ font-size: clamp(34px, 9.5vw, 68px); line-height: 1; }
   .tile .corner-ice{ position:absolute; top:6px; left:6px; font-size:16px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
-  .tile.hint{ box-shadow: 0 0 0 3px #000 inset, 0 6px 18px rgba(0,0,0,.35); }
+  .tile.hint{ box-shadow: 0 0 0 3px #111 inset, 0 6px 18px rgba(0,0,0,.35); }
+  .tile.hint2{ box-shadow: 0 0 0 3px #0b6bcb inset, 0 6px 18px rgba(0,0,0,.35); }
+  .tile.hint3{ box-shadow: 0 0 0 3px #178d5b inset, 0 6px 18px rgba(0,0,0,.35); }
+  .tile.hint4{ box-shadow: 0 0 0 3px #b23dc7 inset, 0 6px 18px rgba(0,0,0,.35); }
   .tile.debug{ outline:3px dashed rgba(255,0,110,.6); outline-offset:-3px; }
 
   .tile.breaker::after{content:\"\"; position:absolute; top:6px; left:6px; width:20px; height:20px; background-size:cover; background-image: var(--img-breaker);}
@@ -136,7 +139,19 @@
         </label>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Hint delay (s)
-          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="12" style="margin-left:auto;width:84px;">
+          <input type="number" id="hintDelayInput" min="2" max="60" step="1" value="15" style="margin-left:auto;width:84px;">
+        </label>
+        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
+          Hints on/off
+          <input type="checkbox" id="hintsEnabledChk" checked style="margin-left:auto;">
+        </label>
+        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
+          Additive hints
+          <input type="checkbox" id="additiveHintsChk" style="margin-left:auto;">
+        </label>
+        <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
+          Multi-hint gap (ms)
+          <input type="number" id="multiHintDelayInput" min="200" max="5000" step="100" value="1000" style="margin-left:auto;width:84px;">
         </label>
         <label class="menu-item" style="display:flex;align-items:center;gap:8px;">
           Prefix bias
@@ -476,7 +491,7 @@
           if(cell.frozen){ div.classList.add('obstacle-frozen'); const ice=document.createElement('span'); ice.className='corner-ice'; ice.textContent='🧊'; div.appendChild(ice); }
           // Booster emoji replaces the letter completely
           if(cell.power){
-            const emoji = cell.power==='rainbow'?'🃏':(cell.power==='breaker'?'🔨':(cell.power==='row'?'↔️':'↕️'));
+            const emoji = cell.power==='rainbow'?'🃏':(cell.power==='breaker'?'🔨':(cell.power==='row'?'↔️':(cell.power==='col'?'↕️':'🧨')));
             const span=document.createElement('span'); span.className='booster-emoji'; span.textContent=emoji; span.style.fontSize=emojiSize+'px'; div.appendChild(span); div.classList.add('power-emoji');
           }else{
             div.textContent=cell.letter;
@@ -663,7 +678,10 @@
 
   function resolveWord(word){
     const len=selection.length; let newPower=null;
-    if(len>=7) newPower='rainbow'; else if(len===6) newPower='col'; else if(len===5) newPower='row'; else if(len===4) newPower='breaker';
+    if(len>=7) newPower='rainbow';
+    else if(len===6) newPower='breaker';
+    else if(len===5) newPower=(Math.random()<0.5?'row':'col');
+    else if(len===4) newPower='bomb';
     const toRemove=new Set(selection);
     const colorCount={yellow:0,green:0,blue:0,purple:0,red:0};
     selection.forEach(i=>{const t=grid[i]; if(t && t.frozen){ t.frozen=false; toRemove.delete(i); }});
@@ -718,13 +736,7 @@
   function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone' || cell.obstacle==='ice'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
   function refill(){ refillSmart(); render(); }
 
-  function recountDynamicObjectives(){
-    // sync ice/fire objectives with current board if those objectives are enabled
-    if(goals && typeof goals.ice==='number'){
-      let c=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='ice') c++; } goals.ice=c; }
-    if(goals && typeof goals.fire==='number'){
-      let f=0; for(let i=0;i<grid.length;i++){ const t=grid[i]; if(t && t.obstacle==='fire') f++; } goals.fire=f; }
-  }
+  function recountDynamicObjectives(){ /* no-op: objectives are descending counters; do not overwrite */ }
   function processFireAfterMove(){
     // Final behavior:
     // 1) Stage 1 (🧨) that survives -> becomes Stage 2 (🔥) in place.
@@ -756,7 +768,7 @@
     // Always schedule a timer based on current delay; when it fires, it will
     // re-check dictLoading and reschedule itself if needed.
     hintTimer = setTimeout(function fireHint(){
-      if(dictLoading){
+      if(dictLoading || !hintsEnabled){
         // try again shortly to avoid being stuck
         hintTimer = setTimeout(fireHint, 500);
         return;
@@ -764,94 +776,15 @@
       showAnyHint();
     }, HINT_DELAY_MS);
   }
-  function showHintPath(path){ path.forEach((i,ord)=>{ const cell=grid[i]; if(!cell || cell.obstacle || (cell.power && cell.power!=='rainbow')) return; const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add('hint'); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
+  function showHintPath(path, klass){ const cls = klass||'hint'; path.forEach((i,ord)=>{ const cell=grid[i]; if(!cell || cell.obstacle || (cell.power && cell.power!=='rainbow')) return; const el=boardEl.querySelector(`.tile[data-i='${i}']`); if(el){ el.classList.add(cls); const b=document.createElement('span'); b.className='ord hint-ord'; b.textContent=String(ord+1); el.appendChild(b); } }); }
   async function showAnyHint(){
-    if(dictLoading) return;
-    clearHint();
-
-    const {dict,pref} = await loadDictionary(currentLang);
-
-    // Build and shuffle list of starting indices
-    const idxs = Array.from({length: ROWS*COLS}, (_,i)=>i);
-    for (let i=idxs.length-1; i>0; i--) {
-      const j = Math.floor(Math.random()*(i+1));
-      [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
-    }
-
-    // Small helper to shuffle neighbors / alphabet
-    const shuffle = (arr)=>{ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
-
-    const visited = new Array(ROWS*COLS).fill(false);
-    const maxLen = isIOS ? 5 : 6;
-    const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    const MAX_WC = 2;
-    let found = null;
-
-    function dfs(path, word, wc){
-      if(found) return;
-      if(!pref.has(word)) return;
-      if(word.length>=3 && dict.has(word)){ found = path.slice(); return; }
-      if(path.length === maxLen) return;
-
-      const last = path[path.length-1];
-      const [r,c] = rc(last);
-
-      // Randomize neighbors each expansion
-      const neighbors = shuffle([
-        [-1,-1],[-1,0],[-1,1],
-        [0,-1],        [0,1],
-        [1,-1],[1,0],[1,1]
-      ]);
-
-      for(const [dr,dc] of neighbors){
-        if(found) break;
-        const nr=r+dr, nc=c+dc;
-        if(!inBounds(nr,nc)) continue;
-        const j = idx(nr,nc);
-        if(visited[j]) continue;
-        const cell = grid[j];
-        if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue;
-
-        visited[j] = true;
-        path.push(j);
-
-        if(cell.power==='rainbow'){
-          if(wc < MAX_WC){
-            const letters = shuffle(A.slice());
-            for(let k=0;k<letters.length;k++){
-              const w2 = word + letters[k];
-              if(pref.has(w2)){
-                dfs(path, w2, wc+1);
-                if(found) break;
-              }
-            }
-          }
-        } else if(!cell.power){
-          const ch = (cell.letter||'').toUpperCase();
-          const w2 = word + ch;
-          dfs(path, w2, wc);
-        }
-
-        path.pop();
-        visited[j] = false;
-      }
-    }
-
-    // Start DFS from randomized order
-    for(let t=0; t<idxs.length && !found; t++){
-      const i = idxs[t];
-      const cell = grid[i];
-      if(!cell || cell.obstacle==='stone' || cell.obstacle==='bomb' || cell.obstacle==='ice' || cell.obstacle==='fire') continue;
-      visited[i] = true;
-      const startWord = (cell.power==='rainbow') ? '' : ((cell.letter||'').toUpperCase());
-      dfs([i], startWord, cell.power==='rainbow' ? 1 : 0);
-      visited[i] = false;
-    }
-
-    if(found){
-      currentHint = found;
-      showHintPath(found);
-    }
+    if(dictLoading) return; clearHint();
+    const list = await findAllWordsOnBoard(); if(!list || !list.length) return;
+    // Priorizar >=4 letras, luego por longitud desc
+    const sorted = list.slice().sort((a,b)=>{ const ap=a.word.length>=4, bp=b.word.length>=4; if(ap!==bp) return ap? -1: 1; return b.word.length - a.word.length; });
+    const picks=[]; const used=new Set(); const maxP = additiveHints?4:1;
+    for(const it of sorted){ if(picks.length>=maxP) break; if(it.path.some(i=>used.has(i))) continue; picks.push(it); it.path.forEach(i=>used.add(i)); }
+    if(!picks.length) return; const classes=['hint','hint2','hint3','hint4']; picks.forEach((p,idx)=>{ const delay=(additiveHints? idx*MULTI_HINT_GAP_MS:0); setTimeout(()=>showHintPath(p.path, classes[idx]||'hint'), delay); }); currentHint=picks[0].path;
   }
 
   function clearDebug(){ document.querySelectorAll('.tile.debug').forEach(el=>el.classList.remove('debug')); }
@@ -867,14 +800,14 @@
   async function refreshDebugOverlay(){ if(!debugMode){ clearDebug(); return; } if(dictLoading){ clearDebug(); toast('Loading dictionary…'); return; } const list=await findAllWordsOnBoard(); drawDebugPaths(list); toast(list.length+' words'); }
 
   // Events
-  boardEl.addEventListener('pointerdown',(e)=>{const i=indexFromPoint(e.clientX,e.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const t=grid[i]; if(!selecting && t && t.power){ if(t.power==='row' || t.power==='col'){ useSelfPower(i); return;} if(t.power==='rainbow'){ startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{} return;} enterTargeting(t.power,i); return;} startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{}}});
+  boardEl.addEventListener('pointerdown',(e)=>{const i=indexFromPoint(e.clientX,e.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const t=grid[i]; if(!selecting && t && t.power){ if(t.power==='row' || t.power==='col' || t.power==='bomb'){ useSelfPower(i); return;} if(t.power==='rainbow'){ startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{} return;} enterTargeting(t.power,i); return;} startSelect(i); try{boardEl.setPointerCapture(e.pointerId); selectingPointerId=e.pointerId;}catch{}}});
   boardEl.addEventListener('pointermove',(e)=>{if(!selecting) return; const i=indexFromPoint(e.clientX,e.clientY); if(i>=0) extendTo(i);});
   boardEl.addEventListener('pointerup',()=>{if(selecting) finishSelect(); if(selectingPointerId!=null){try{boardEl.releasePointerCapture(selectingPointerId);}catch{} selectingPointerId=null;}});
 
   // Touch fallback (iOS Safari)
   boardEl.addEventListener('touchstart',(e)=>{
     if(!e.touches || e.touches.length===0) return; const t=e.touches[0]; e.preventDefault();
-    const i=indexFromPoint(t.clientX,t.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const cell=grid[i]; if(!selecting && cell && cell.power){ if(cell.power==='row' || cell.power==='col'){ useSelfPower(i); return;} if(cell.power==='rainbow'){ startSelect(i); return;} enterTargeting(cell.power,i); return;} startSelect(i); }
+    const i=indexFromPoint(t.clientX,t.clientY); if(i>=0){ if(targeting){ applyTargeting(i); return;} const cell=grid[i]; if(!selecting && cell && cell.power){ if(cell.power==='row' || cell.power==='col' || cell.power==='bomb'){ useSelfPower(i); return;} if(cell.power==='rainbow'){ startSelect(i); return;} enterTargeting(cell.power,i); return;} startSelect(i); }
   }, {passive:false});
   boardEl.addEventListener('touchmove',(e)=>{
     if(!e.touches || e.touches.length===0) return; const t=e.touches[0]; e.preventDefault(); if(!selecting) return; const i=indexFromPoint(t.clientX,t.clientY); if(i>=0) extendTo(i);
@@ -919,6 +852,7 @@
     const affected=new Set();
     if(t.power==='row'){ const [r]=rc(from); for(let cc=0;cc<COLS;cc++) affected.add(idx(r,cc)); }
     else if(t.power==='col'){ const [,c]=rc(from); for(let rr=0;rr<ROWS;rr++) affected.add(idx(rr,c)); }
+    else if(t.power==='bomb'){ const [r,c]=rc(from); for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){ const rr=r+dr,cc=c+dc; if(!inBounds(rr,cc)) continue; affected.add(idx(rr,cc)); } }
     else return; // only row/col here
     explodeAffected(affected, from);
   }
@@ -949,6 +883,14 @@
   if(debugToggleOverlayBtn){ debugToggleOverlayBtn.addEventListener('click',()=>{ debugMode=!debugMode; debugToggleOverlayBtn.classList.toggle('primary',debugMode); refreshDebugOverlay(); }); }
   const wordDebugChk=document.getElementById('wordDebugChk');
   if(wordDebugChk){ wordDebugChk.addEventListener('change', ()=>{ verboseWordDebug=wordDebugChk.checked; }); }
+  // Hints toggles
+  let hintsEnabled=true, additiveHints=false, MULTI_HINT_GAP_MS=1000;
+  const hintsEnabledChk=document.getElementById('hintsEnabledChk');
+  const additiveHintsChk=document.getElementById('additiveHintsChk');
+  const multiHintDelayInput=document.getElementById('multiHintDelayInput');
+  if(hintsEnabledChk){ hintsEnabledChk.checked=hintsEnabled; hintsEnabledChk.addEventListener('change', ()=>{ hintsEnabled=hintsEnabledChk.checked; if(!hintsEnabled){ clearTimeout(hintTimer); clearHint(); } else { scheduleHint(); } }); }
+  if(additiveHintsChk){ additiveHintsChk.checked=additiveHints; additiveHintsChk.addEventListener('change', ()=>{ additiveHints=additiveHintsChk.checked; }); }
+  if(multiHintDelayInput){ multiHintDelayInput.value=Math.max(200, MULTI_HINT_GAP_MS); multiHintDelayInput.addEventListener('change', ()=>{ const v=Number(multiHintDelayInput.value)||1000; MULTI_HINT_GAP_MS=Math.max(200, v); }); }
   // Inventory buttons
   document.querySelectorAll('#inventory .inv-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
