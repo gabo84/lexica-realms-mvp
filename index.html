@@ -542,6 +542,7 @@
           div.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const span=document.createElement('span'); span.textContent=emoji; span.style.fontSize=emojiSize+'px'; div.appendChild(span);
         }
         else if(cell.obstacle==='ice'){div.classList.add('obstacle-ice'); const span=document.createElement('span'); span.textContent='🧊'; span.style.fontSize=emojiSize+'px'; if(cell.layers&&cell.layers>1){ const b=document.createElement('span'); b.className='badge'; b.textContent='×'+cell.layers; div.appendChild(b);} div.appendChild(span);}
+        else if(cell.obstacle==='void'){div.style.visibility='hidden';}
         else{
           // Background and text color
           const top=tint(cell.color,.22); div.style.background=`linear-gradient(135deg, ${top}, ${cell.color})`;
@@ -900,9 +901,24 @@
     seen.forEach(j=>{ const el=boardEl.querySelector(`.tile[data-i='${j}']`); if(el) el.classList.add('explode'); });
     setTimeout(()=>{
       const colorCount={yellow:0,green:0,blue:0,purple:0,red:0};
-    seen.forEach(j=>{ const t=grid[j]; if(!t) return; if(t.obstacle==='stone') return; if(t && !t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++; grid[j]=null; });
+      let iceBrokenCount=0, fireClearedCount=0;
+      seen.forEach(j=>{
+        const t=grid[j];
+        if(!t) return;
+        if(t.obstacle==='stone') return;
+        if(t.obstacle==='ice'){ if(t.layers && t.layers>1){ t.layers--; } else { grid[j]=newTile(); iceBrokenCount++; } return; }
+        if(t.obstacle==='fire'){ grid[j]=null; fireClearedCount++; return; }
+        if(!t.obstacle && t.colorKey && colorCount[t.colorKey]!=null) colorCount[t.colorKey]++;
+        grid[j]=null;
+      });
       if(grid[from]) grid[from]=null; // remove original booster tile to allow gravity/refill
-      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0)); goals.green=Math.max(0,goals.green-(colorCount.green||0)); goals.blue=Math.max(0,goals.blue-(colorCount.blue||0)); goals.purple=Math.max(0,(goals.purple||0)-(colorCount.purple||0)); goals.red=Math.max(0,(goals.red||0)-(colorCount.red||0));
+      goals.yellow=Math.max(0,goals.yellow-(colorCount.yellow||0));
+      goals.green=Math.max(0,goals.green-(colorCount.green||0));
+      goals.blue=Math.max(0,goals.blue-(colorCount.blue||0));
+      goals.purple=Math.max(0,(goals.purple||0)-(colorCount.purple||0));
+      goals.red=Math.max(0,(goals.red||0)-(colorCount.red||0));
+      goals.ice=Math.max(0,(goals.ice||0)-iceBrokenCount);
+      goals.fire=Math.max(0,(goals.fire||0)-fireClearedCount);
       recountDynamicObjectives(); updateGoalsUI();
       const movesMap=applyGravity(); refill(); processFireAfterMove(); scheduleHint(); refreshDebugOverlay();
       const px=cellSizePx(); Object.entries(movesMap).forEach(([to,d])=>{ const el=boardEl.querySelector(`.tile[data-i='${to}']`); if(el) el.style.setProperty('--fall',`${-d*px}px`); });
@@ -1177,6 +1193,9 @@
         return {letter:null,colorKey:null,color:'#bfc4cc',obstacle:'stone',frozen:false,power:null};
       } else if(cell.type==='fire'){
         return {letter:null,colorKey:null,color:'#ffaf87',obstacle:'fire',stage:Number(cell.stage)||1,frozen:false,power:null};
+      } else if(cell.type==='void'){
+        // Permanent empty cell: never filled or rendered
+        return {letter:null,colorKey:null,color:null,obstacle:'void',frozen:false,power:null};
       } else return null;
     });
     // Clear empty placeholders to truly-empty so generator can seed
