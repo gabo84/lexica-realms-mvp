@@ -2,27 +2,8 @@
   "cols": 5,
   "rows": 5,
   "grid": [
-    null,
     {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    null,
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
+      "type": "void"
     },
     {
       "type": "letter",
@@ -40,23 +21,8 @@
       "color": "random"
     },
     {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
+      "type": "void"
     },
-    null,
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    null,
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    null,
     {
       "type": "letter",
       "letter": "",
@@ -82,7 +48,35 @@
       "letter": "",
       "color": "random"
     },
-    null,
+    {
+      "type": "void"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "void"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "void"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
     {
       "type": "letter",
       "letter": "",
@@ -98,7 +92,27 @@
       "letter": "",
       "color": "random"
     },
-    null
+    {
+      "type": "void"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "void"
+    }
   ],
   "objectives": {
     "red": 0,
