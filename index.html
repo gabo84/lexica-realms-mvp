@@ -58,6 +58,7 @@
 
   /* Board */
   #board{width:92vw; max-width:420px; aspect-ratio:8/10; margin:auto; padding:12px; background:#f4f6f9; border-radius:14px; box-shadow:0 10px 30px var(--shadow); position:relative; display:flex; align-items:center; justify-content:center;}
+  #board-container{ padding:12px 0; }
   #board-container{flex:1; display:flex; align-items:center; justify-content:center;}
   #tiles{position:absolute; inset:0; display:grid; grid-template-columns:repeat(var(--cols,8),1fr); grid-template-rows:repeat(var(--rows,10),1fr); gap:12px;}
 
@@ -231,7 +232,7 @@
     <ol>
       <li id="tut1">Press and drag across adjacent letters (diagonals ok) to form a word.</li>
       <li id="tut2">Release to submit. If valid, tiles are removed and colors count toward goals.</li>
-      <li id="tut3">Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.</li>
+      <li id="tut3">Words of 4/5/6/7+ grant boosters: Row/Column / Bomb / Breaker / Rainbow.</li>
       <li id="tut4">Use a booster by tapping its tile, then tap a target.</li>
     </ol>
     <button id="closeTutorial" class="debug-badge" style="background:#60a5fa">Got it</button>
@@ -241,10 +242,10 @@
 <footer style="max-width:1080px;margin:16px auto 28px;padding:12px 16px;color:#333;font-size:14px;line-height:1.5;">
   <strong>Boosters (actualizados):</strong>
   <ul style="margin:8px 0 0 18px; padding:0;">
-    <li><strong>4 letras → 🔨 Block breaker:</strong> toca el booster y luego una ficha para romper solo esa pieza.</li>
-    <li><strong>5 letras → ➡️ Row breaker:</strong> toca el booster y luego una ficha para romper toda la fila.</li>
-    <li><strong>6 letras → ⬇️ Column breaker:</strong> toca el booster y luego una ficha para romper toda la columna.</li>
-    <li><strong>7+ letras → 🌈 Rainbow (comodín):</strong> úsalo dentro de una palabra; puede reemplazar cualquier letra/color.</li>
+    <li><strong>4 letras → ↔️/↕️ Row/Column breaker:</strong> toca el booster y luego una ficha para romper toda la fila o toda la columna.</li>
+    <li><strong>5 letras → 💣 Bomba (3×3):</strong> toca la bomba para detonar un área 3×3 y encadenar filas/columnas cercanas.</li>
+    <li><strong>6 letras → 🔨 Block breaker:</strong> toca el booster y luego una ficha para romper solo esa pieza.</li>
+    <li><strong>7+ letras → 🃏 Rainbow (comodín):</strong> úsalo dentro de una palabra; puede reemplazar cualquier letra/color.</li>
   </ul>
 </footer>
 
@@ -300,9 +301,9 @@
   var IS_FILE = (function(){ try{ return location && location.protocol === 'file:'; }catch(_){ return false; } })();
 
   const STRINGS = {
-    en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Breaker / Row / Column / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!',dictLoading:'Loading dictionary…',dictReady:'Dictionary ready',dictFallback:'Dictionary offline — fallback',
+    en:{moves:'Moves',tut1:'Press and drag across adjacent letters (diagonals ok) to form a word.',tut2:'Release to submit. If valid, tiles are removed and colors count toward goals.',tut3:'Words of 4/5/6/7+ grant boosters: Row/Column / Bomb / Breaker / Rainbow.',tut4:'Use a booster by tapping its tile, then tap a target.',shuffled:'Shuffled',turnEnded:'Turn ended',outOfMoves:'Out of moves',lvlUp:'Level up',notValid:'Not a valid word',powerCreated:'Power-up created!',objectivesDone:'Objectives complete!',dictLoading:'Loading dictionary…',dictReady:'Dictionary ready',dictFallback:'Dictionary offline — fallback',
       lostTitle:'You lost', plus5:'+5 Moves', loseBtn:'Lose' },
-    es:{moves:'Movimientos',tut1:'Mantén presionado y arrastra por letras adyacentes (diagonales también) para formar una palabra.',tut2:'Suelta para enviar. Si es válida, se eliminan las fichas y sus colores cuentan al objetivo.',tut3:'Palabras de 4/5/6/7+ otorgan poderes: Rompe-bloque / Rompe-fila / Rompe-columna / Comodín.',tut4:'Usa un poder tocando su ficha y luego el objetivo.',shuffled:'Mezclado',turnEnded:'Turno finalizado',outOfMoves:'Sin movimientos',lvlUp:'Nivel superado',notValid:'Palabra inválida',powerCreated:'¡Poder creado!',objectivesDone:'¡Objetivos completos!',dictLoading:'Cargando diccionario…',dictReady:'Diccionario listo',dictFallback:'Diccionario offline — fallback',
+    es:{moves:'Movimientos',tut1:'Mantén presionado y arrastra por letras adyacentes (diagonales también) para formar una palabra.',tut2:'Suelta para enviar. Si es válida, se eliminan las fichas y sus colores cuentan al objetivo.',tut3:'Palabras de 4/5/6/7+ otorgan poderes: Fila/Columna / Bomba / Rompe‑bloque / Comodín.',tut4:'Usa un poder tocando su ficha y luego el objetivo.',shuffled:'Mezclado',turnEnded:'Turno finalizado',outOfMoves:'Sin movimientos',lvlUp:'Nivel superado',notValid:'Palabra inválida',powerCreated:'¡Poder creado!',objectivesDone:'¡Objetivos completos!',dictLoading:'Cargando diccionario…',dictReady:'Diccionario listo',dictFallback:'Diccionario offline — fallback',
       lostTitle:'Perdiste', plus5:'+5 movimientos', loseBtn:'Perder' }
   };
 
@@ -434,6 +435,7 @@
 
   const vowels="AEIOU";
   let lettersBag=[..."EEEEEEEEEEEEAAAAAAAIIIIIIIOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYKJXQZ"];
+  let strictLetterWeights=false;
   function setLetterWeights(weights){
     if(!weights){ return; }
     const seq=[]; const scale=10; // scale percentages to counts
@@ -442,7 +444,7 @@
       const n=Math.max(1, Math.round(v*scale));
       for(let i=0;i<n;i++) seq.push(String(k).toUpperCase());
     });
-    if(seq.length>=5) lettersBag=seq;
+    if(seq.length>=5) { lettersBag=seq; strictLetterWeights=true; }
   }
 
   // Dynamic color weights (percentages). Supports: yellow, green, blue, purple, red
@@ -515,7 +517,7 @@
   const rc=i=>[Math.floor(i/COLS),i%COLS];
   const inBounds=(r,c)=>r>=0&&c>=0&&r<ROWS&&c<COLS;
 
-  const randLetter=()=>{const pick=lettersBag[Math.floor(Math.random()*lettersBag.length)];return Math.random()<0.12?vowels[Math.floor(Math.random()*vowels.length)]:pick;};
+  const randLetter=()=>{const pick=lettersBag[Math.floor(Math.random()*lettersBag.length)]; if(strictLetterWeights) return pick; return Math.random()<0.12?vowels[Math.floor(Math.random()*vowels.length)]:pick;};
   const newTile=()=>{const col=pickColor();return{letter:randLetter(),colorKey:col.key,color:col.color,obstacle:null,frozen:false,power:null}};
 
   function placeIceBlockers(){
@@ -534,7 +536,7 @@
       const div=document.createElement('div'); div.className='tile'; div.dataset.i=i;
       if(cell){
         if(cell.obstacle==='stone'){div.classList.add('obstacle-stone');}
-        else if(cell.obstacle==='bomb'){div.classList.add('obstacle-bomb'); div.textContent='🧨';}
+        else if(cell.obstacle==='bomb'){div.classList.add('obstacle-bomb'); div.textContent='💣';}
         else if(cell.obstacle==='fire'){
           const stage=cell.stage||1; const emoji = stage===1?'🧨':(stage===2?'🔥':'🔥');
           div.style.background='linear-gradient(135deg,#ffd3c1,#ff9f80)'; const span=document.createElement('span'); span.textContent=emoji; span.style.fontSize=emojiSize+'px'; div.appendChild(span);
@@ -548,7 +550,7 @@
           if(cell.frozen){ div.classList.add('obstacle-frozen'); const ice=document.createElement('span'); ice.className='corner-ice'; ice.textContent='🧊'; div.appendChild(ice); }
           // Booster emoji replaces the letter completely
           if(cell.power){
-            const emoji = cell.power==='rainbow'?'🃏':(cell.power==='breaker'?'🔨':(cell.power==='row'?'↔️':(cell.power==='col'?'↕️':'🧨')));
+            const emoji = cell.power==='rainbow'?'🃏':(cell.power==='breaker'?'🔨':(cell.power==='row'?'↔️':(cell.power==='col'?'↕️':'💣')));
             const span=document.createElement('span'); span.className='booster-emoji'; span.textContent=emoji; span.style.fontSize=emojiSize+'px'; div.appendChild(span); div.classList.add('power-emoji');
           }else{
             div.textContent=cell.letter;
@@ -673,9 +675,10 @@
 
   async function endSelect(){
     if(submitting) return; submitting=true;
-    const {ok} = await isValidSelectionWithWildcards();
+    const {ok, resolved} = await isValidSelectionWithWildcards();
     if(!ok){ debugWordInfo(getCurrentWord()); shakeBoard(); clearSelection(); scheduleHint(); submitting=false; return; }
-    resolveWord(getCurrentWord()); // we can keep original display; removal consumes the rainbow tile
+    if(resolved){ try{ console.log('[Resolved]', resolved); }catch(_){} }
+    resolveWord(resolved || getCurrentWord()); // consume selection; scoring uses resolved if available
     submitting=false;
   }
   function debugWordInfo(word){
@@ -794,7 +797,7 @@
     if(moves===0){ showLoseModal(); }
   }
 
-  function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone' || cell.obstacle==='ice'){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
+  function applyGravity(){ const moves={}; for(let c=0;c<COLS;c++){ let write=ROWS-1; for(let r=ROWS-1;r>=0;r--){ const i=idx(r,c), cell=grid[i]; if(cell){ if(cell.obstacle==='stone' || cell.obstacle==='ice' || cell.obstacle==='fire' || cell.obstacle==='void' || cell.power){ write=r-1; continue; } if(write!==r){ const wi=idx(write,c); grid[wi]=cell; grid[i]=null; moves[wi]=(moves[wi]||0)+(write-r);} write--; } } } return moves; }
   function refill(){ refillSmart(); render(); }
 
   function recountDynamicObjectives(){ /* no-op: objectives are descending counters; do not overwrite */ }
@@ -1090,12 +1093,15 @@
         let s=0;
         // Prefix bonus with neighbors (left/right/up/down)
         const neighbors=[[r-1,c],[r,c-1],[r,c+1],[r+1,c]];
-        for(const [nr,nc] of neighbors){ if(!inBounds(nr,nc)) continue; const t=grid[idx(nr,nc)]; if(t && t.letter){ const seq = (nr===r && nc===c-1)? (t.letter+L) : (L+t.letter); const pre=normalizeWord(currentLang, seq); if(pref.has(pre)) s+= (genConfig.prefixBiasStrength||0.7); } }
+        let prefixWeight=(genConfig.prefixBiasStrength||0.7);
+        if(!pref || (pref.size!==undefined && pref.size===0)) prefixWeight*=0.2;
+        for(const [nr,nc] of neighbors){ if(!inBounds(nr,nc)) continue; const t=grid[idx(nr,nc)]; if(t && t.letter){ const seq = (nr===r && nc===c-1)? (t.letter+L) : (L+t.letter); const pre=normalizeWord(currentLang, seq); if(pref.has(pre)) s+= prefixWeight; } }
         // Bigram probabilities (left->L, up->L, L->right, L->down)
-        const left = inBounds(r,c-1)? grid[idx(r,c-1)] : null; if(left && left.letter){ const key=(left.letter+L).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
-        const up = inBounds(r-1,c)? grid[idx(r-1,c)] : null; if(up && up.letter){ const key=(up.letter+L).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
-        const right = inBounds(r,c+1)? grid[idx(r,c+1)] : null; if(right && right.letter){ const key=(L+(right.letter)).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
-        const down = inBounds(r+1,c)? grid[idx(r+1,c)] : null; if(down && down.letter){ const key=(L+(down.letter)).toUpperCase(); s += (bigr.get(key)||0) * (genConfig.ngramBiasStrength||0.5); }
+        const ngramW=(genConfig.ngramBiasStrength||0.5) * ((bigr && bigr.size>0)?1:0.2);
+        const left = inBounds(r,c-1)? grid[idx(r,c-1)] : null; if(left && left.letter){ const key=(left.letter+L).toUpperCase(); s += (bigr.get(key)||0) * ngramW; }
+        const up = inBounds(r-1,c)? grid[idx(r-1,c)] : null; if(up && up.letter){ const key=(up.letter+L).toUpperCase(); s += (bigr.get(key)||0) * ngramW; }
+        const right = inBounds(r,c+1)? grid[idx(r,c+1)] : null; if(right && right.letter){ const key=(L+(right.letter)).toUpperCase(); s += (bigr.get(key)||0) * ngramW; }
+        const down = inBounds(r+1,c)? grid[idx(r+1,c)] : null; if(down && down.letter){ const key=(L+(down.letter)).toUpperCase(); s += (bigr.get(key)||0) * ngramW; }
         // Light penalty for repeating exact 3-in-a-row horizontally
         if(inBounds(r,c-1)&&inBounds(r,c-2)){ const t1=grid[idx(r,c-1)], t2=grid[idx(r,c-2)]; if(t1&&t2&&t1.letter===L&&t2.letter===L) s-=0.4; }
         if(s>bestScore){ best=L; bestScore=s; }
