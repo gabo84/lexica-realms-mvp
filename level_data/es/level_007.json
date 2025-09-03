@@ -4,8 +4,9 @@
   "grid": [
     null,
     {
-      "type": "ice",
-      "layers": 3
+      "type": "letter",
+      "letter": "",
+      "color": "random"
     },
     {
       "type": "letter",
@@ -13,59 +14,15 @@
       "color": "random"
     },
     {
-      "type": "ice",
-      "layers": 3
+      "type": "letter",
+      "letter": "",
+      "color": "random"
     },
     null,
     {
-      "type": "ice",
-      "layers": 3
-    },
-    {
       "type": "letter",
       "letter": "",
       "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "ice",
-      "layers": 3
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "stone"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "letter",
-      "letter": "",
-      "color": "random"
-    },
-    {
-      "type": "ice",
-      "layers": 3
     },
     {
       "type": "letter",
@@ -83,13 +40,27 @@
       "color": "random"
     },
     {
-      "type": "ice",
-      "layers": 3
+      "type": "letter",
+      "letter": "",
+      "color": "random"
     },
     null,
     {
-      "type": "ice",
-      "layers": 3
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    null,
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    null,
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
     },
     {
       "type": "letter",
@@ -97,18 +68,45 @@
       "color": "random"
     },
     {
-      "type": "ice",
-      "layers": 3
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    null,
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
+    },
+    {
+      "type": "letter",
+      "letter": "",
+      "color": "random"
     },
     null
   ],
   "objectives": {
-    "red": 5,
+    "red": 0,
     "blue": 5,
     "yellow": 5,
     "green": 0,
-    "purple": 0,
-    "ice": 24,
+    "purple": 10,
+    "ice": 0,
     "fire": 0
   },
   "letterWeights": {
@@ -140,11 +138,11 @@
     "F": 2
   },
   "colorWeights": {
-    "red": 10,
+    "red": 0,
     "blue": 20,
     "yellow": 30,
     "green": 30,
-    "purple": 10
+    "purple": 20
   },
   "lang": "es",
   "seedWords": [
