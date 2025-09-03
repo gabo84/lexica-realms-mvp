@@ -64,6 +64,7 @@
         <div class="tool" data-tool="ice">🧊 Ice</div>
         <div class="tool" data-tool="stone">🪨 Stone</div>
         <div class="tool" data-tool="fire">🔥 Fire</div>
+        <div class="tool" data-tool="void">🕳️ Void</div>
         <div class="tool" data-tool="erase">🧹 Erase</div>
       </div>
       <div class="row" style="flex-wrap:wrap"><label>Letter <input id="letter" type="text" value="A" maxlength="1" style="width:40px;text-transform:uppercase"></label> <label style="margin-left:10px"><input id="chkRandLetter" type="checkbox"> Random letter %</label></div>
@@ -195,7 +196,7 @@ let weights=normalizeCountsToPercent(defaultWeights); // letter %
       gridEl.appendChild(d); }); }
     draw();
 
-    function place(i){ if(i<0) return; const tool=currentTool; if(tool==='erase'){ grid[i]=null; } else if(tool==='letter'){ let letter=(document.getElementById('letter').value||'A').toUpperCase(); const colorBox=document.getElementById('color'); let color=colorBox.value||'yellow'; const randL=document.getElementById('chkRandLetter').checked; const randC=document.getElementById('chkRandColor').checked; if(randL) letter=''; if(randC) color='random'; grid[i]={type:'letter',letter,color}; } else if(tool==='ice'){ const layers=Math.max(1,Number(document.getElementById('iceLayers').value)||1); grid[i]={type:'ice',layers}; } else if(tool==='stone'){ grid[i]={type:'stone'}; } else if(tool==='fire'){ const stage=Number(document.getElementById('fireStage').value)||1; grid[i]={type:'fire',stage}; } draw(); saveAutosave(); }
+    function place(i){ if(i<0) return; const tool=currentTool; if(tool==='erase'){ grid[i]=null; } else if(tool==='letter'){ let letter=(document.getElementById('letter').value||'A').toUpperCase(); const colorBox=document.getElementById('color'); let color=colorBox.value||'yellow'; const randL=document.getElementById('chkRandLetter').checked; const randC=document.getElementById('chkRandColor').checked; if(randL) letter=''; if(randC) color='random'; grid[i]={type:'letter',letter,color}; } else if(tool==='ice'){ const layers=Math.max(1,Number(document.getElementById('iceLayers').value)||1); grid[i]={type:'ice',layers}; } else if(tool==='stone'){ grid[i]={type:'stone'}; } else if(tool==='fire'){ const stage=Number(document.getElementById('fireStage').value)||1; grid[i]={type:'fire',stage}; } else if(tool==='void'){ grid[i]={type:'void'}; } draw(); saveAutosave(); }
 
     // Interactions
     gridEl.addEventListener('mousedown',e=>{ mouseDown=true; const i=Number(e.target.closest('.cell')?.dataset?.i||-1); place(i); });
